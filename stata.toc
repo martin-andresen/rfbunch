@@ -1,0 +1,3 @@
+v 0.95
+d Martin Eckhoff Andresen, Statistics Norway
+p rfbunch reduced form bunching estimation with multiple response variables
