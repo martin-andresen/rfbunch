@@ -1,8 +1,8 @@
 //rfbunch.ado, bunching estimation for firms by Martin Eckhoff Andresen
 !version 0.95
 cap prog drop rfbunch
-program rfbunch [ifin], eclass sortpreserve
-	syntax varlist(min=1) [if],  CUToff(real) bw(real) [ ///
+program rfbunch, eclass sortpreserve
+	syntax varlist(min=1) [if] [in],  CUToff(real) bw(real) [ ///
 	LIMits(numlist min=1 max=2 >=0) ///
 	notch(numlist min=2 max=3 >=0) ///
 	kink(numlist min=2 max=2 >0) ///
@@ -283,17 +283,6 @@ program rfbunch [ifin], eclass sortpreserve
 		//ESTIMATE ELASTICITIES
 		tempname e
 		if "`tcr'"!="" {
-			mata: e=tcr(`t_tcr',`cutoff',`eta',`=`eresp'',`init')
-			if `e'[1,2]!=0 {
-				noi di as error "Error code `errorcode' during numeric optimization using tcr(). See help mata optimize."
-				noi di as error "Elasticity estimates not reported"
-				mat `b'=`b',.,. //elasticity
-			}
-			else mat `b'=`b',`e's,`=e+1' //elasticity
-			loc names `names' production capital
-			loc coleq `coleq' tcr tcr
-		}
-		if "`tcr'"!="" {
 			mata: e=tcr(`t_tcr',`cutoff',`eta_tcr',`r_tcr',`=eresp',`=shift',st_matrix("`initmat'"))
 			mata: st_matrix("`e'",e)
 			if `e'[1,5]!=0 {
@@ -377,7 +366,7 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 		optimize_init_which(S,"min")
 		optimize_init_conv_ptol(S, 1e-12)
 		optimize_init_conv_vtol(S, 1e-12)
-		optimize_init_evaluator(S, &evaltcr2())
+		optimize_init_evaluator(S, &evaltcr())
 		optimize_init_evaluatortype(S, "v0")
 		optimize_init_argument(S, 1, t)
 		optimize_init_argument(S, 2, tau)

@@ -1,5 +1,5 @@
-cap prog drop bunchplot9
-	program bunchplot9
+cap prog drop rfbunchplot
+	program rfbunchplot
 	
 	syntax [name], [graph_opts(string) parameters(string) noci nostar adjust limit(numlist min=2 max=2) weight]
 	
@@ -32,7 +32,6 @@ cap prog drop bunchplot9
 			loc ci noci
 			loc star nostar
 		}
-		
 		
 		clear
 		
