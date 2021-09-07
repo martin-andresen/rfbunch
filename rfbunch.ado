@@ -300,7 +300,7 @@ program rfbunch, eclass sortpreserve
 			loc coleq `coleq' kink
 		}	
 		if "`notch'"!="" {
-			mata: e=notch(`t0_notch',`t1_notch',`deltaT_notch',`cutoff',`=`eresp'',`init')
+			mata: e=notch(`t0_notch',`t1_notch',`deltaT_notch',`cutoff',`=eresp',`init')
 			if `e'[1,2]!=0 {
 				noi di as error "Error code `errorcode' during numeric optimization using notch(). See help mata optimize."
 				noi di as error "Elasticity estimates not reported"
