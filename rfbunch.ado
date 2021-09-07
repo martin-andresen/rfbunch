@@ -103,7 +103,7 @@ program rfbunch, eclass sortpreserve
 				noi di in red "syntax of notch is notch(t0 t1 [deltaT]), where t0 and t1 are tax rates between 0 and 1 and deltaT are nonnegative."
 				exit 301
 			}
-			if "`init'"=="" loc init=0
+			if "`init'"=="" loc init=0.1
 			else {
 				loc numinit: word count `init'
 				if `numinit'!=1 {
@@ -307,7 +307,7 @@ program rfbunch, eclass sortpreserve
 				noi di as error "Elasticity estimates not reported"
 				mat `b'=`b',. //elasticity
 			}
-			else mat `b'=`b',`e' //elasticity
+			else mat `b'=`b',`e'[1,1] //elasticity
 			loc names `names' elasticity
 			loc coleq `coleq' notch
 		}
