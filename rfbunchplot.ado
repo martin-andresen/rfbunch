@@ -26,6 +26,14 @@ cap prog drop bunchplot9
 			
 		}
 		
+		cap confirm matrix e(V)
+		if _rc!=0 {
+			noi di as text "No variance-covariance matrix found. Confidence intervals and significance stars not reported"
+			loc ci noci
+			loc star nostar
+		}
+		
+		
 		clear
 		
 		tempvar f0 f1 CI_l0 CI_r0 CI_l1 CI_r1 error bin f
