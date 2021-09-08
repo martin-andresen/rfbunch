@@ -49,19 +49,21 @@ program rfbunch, eclass sortpreserve
 				exit 301
 				}
 			}
-		if "`adjust'"=="x" loc type=1
-		else if "`adjust'"=="y" loc type=0
+		if "`adjust'"=="x" loc type=2
+		else if "`adjust'"=="y" loc type=1
+		else loc type==0
+		
 		if "`limits'"!="" {
-			gettoken lower upper: limits
-			if "`upper'"=="" loc upper=0
+			gettoken L H: limits
+			if "`H'"=="" loc H=0
 		}
 		else {
-			loc lower=1
-			loc upper=0
+			loc L=1
+			loc H=0
 		}
 		
-		loc lower=`cutoff'-`lower'*`bw'
-		loc upper=`cutoff'+`upper'*`bw'
+		loc zL=`cutoff'-`L'*`bw'
+		loc zH=`cutoff'+`H'*`bw'
 		
 		
 		//check tcr, kink, notch options
@@ -131,47 +133,19 @@ program rfbunch, eclass sortpreserve
 		
 		
 		tempvar resid freq0 freq touse useobs bin
-		tempname table cutvals cf b adj_freq obsbins
+		tempname table cutvals cf b adj_freq obsbins shiftmat
 		marksample touse
 		preserve
 		drop if !`touse'
 		keep `varlist'
 		loc N=_N
-		su `varlist'
-		loc hi=r(max)
-		loc lo=r(min)
-		count if `varlist'>`lower'
+		count if `varlist'>`zL'
 		loc BM=r(N)
-		count if `varlist'>`lower'&`varlist'<=`cutoff'
+		count if `varlist'>`zL'&`varlist'<=`zH'
 		loc Bunchmass=r(N)
 		
-		gen `bin'=-floor((`cutoff'-`varlist')/`bw')*`bw'+`cutoff'-`bw'/2
-		tab `bin', matrow(`obsbins') matcell(`table')
-		mat `table'=`obsbins',`table'
 		loc colfreq `varlist' frequency
-		gen `useobs' = `varlist'<=`lower'|`varlist'>`upper'
-		if inlist("`adjust'","x","y") {
-			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`lower',`hi',`upper',`pol',`BM',`bw',`type',10,1)
-			mata: st_numscalar("shift",shift)
-
-			if "`adjust'"=="x" {
-				replace `varlist'=shift*`varlist' if `varlist'>`upper'
-				drop `bin'
-				gen `bin'=-floor((`cutoff'-`varlist')/`bw')*`bw'+`cutoff'-`bw'/2
-				}
-			}
-		
-		keep `bin'
-		rename `bin' `varlist'
-		
-		contract `varlist', freq(`freq')
-		if "`adjust'"=="y" replace `freq'=`freq'*shift if `varlist'>`cutoff'
-		gen `useobs' = `varlist'<=`lower'|`varlist'>`upper'
-		
-		if inlist("`adjust'","x","y")  {
-			mkmat `varlist' `freq', matrix(`adj_freq')
-			mat colnames `adj_freq'=`varlist' adj_frequency
-			}
+		gen `useobs' = `varlist'<=`zL'|`varlist'>`zH'
 		
 		forvalues i=1/`pol' {
 			if "`rhsvars'"=="" loc rhsvars  c.`varlist'
@@ -179,23 +153,37 @@ program rfbunch, eclass sortpreserve
 			mat `cutvals'=nullmat(`cutvals') \ `cutoff'^`i'
 			loc coleq `coleq' counterfactual_frequency
 		}
+	
 		loc coleq `coleq' counterfactual_frequency
 		mat `cutvals'=1 \ `cutvals'
 		
-		regress `freq' `rhsvars' if `useobs'
-		mat `cf'=e(b)
-		local names: colnames `cf'
-		mat `cf'=`cf'[1,`=colsof(`cf')'],`cf'[1,1..`=colsof(`cf')-1']
+		mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`zH',`zH',1,0))
 		
+		//Get countefactual and adjust, if using
 		if inlist("`adjust'","x","y") {
-			mat `b'=e(b),shift //shift parameter
-			loc names `names' shift
+			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`pol',`BM',`bw',`type',10,1)
+			mata: st_matrix("`b'",shift)
+			mata: st_matrix("`adj_freq'",fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',`=`b'[1,`=colsof(`b')']',`type'))
+			mat `cf'=`b'[1,1..`=colsof(`b')-1']
+			mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
+			fvexpand `rhsvars'
+			loc names `r(varlist)' _cons  shift
 			loc coleq `coleq' bunching
+			}
+		else {
+			mata: data=fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',1,0)
+			mata: xbin=J(rows(data[.,1]),1,1)
+			mata: for (p=1; p<=`pol'; p++) xbin=xbin,data[.,1]:^p
+			mata: b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
+			mata: st_matrix("`b'",b)
+			mat `cf'=`b'[1,1..`=colsof(`b')-1']
+			mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
+			fvexpand `rhsvars'
+			loc names `r(varlist)' _cons
 		}
-		else mat `b'=e(b)
 		
 		tempname freq0b freq0tau
-		mata: st_matrix("`freq0b'",(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff')-polyeval(polyinteg(st_matrix("`cf'"),1),`lower'))/`bw')
+		mata: st_matrix("`freq0b'",(polyeval(polyinteg(st_matrix("`cf'"),1),`zH')-polyeval(polyinteg(st_matrix("`cf'"),1),`zL'))/`bw')
 		mata: st_matrix("`freq0tau'",(polyeval(st_matrix("`cf'"),`cutoff')))
 		loc B=`=`Bunchmass'-`freq0b'[1,1]'
 		mat `b'=`b',`B',`=`B'/`N'',`=`B'/`freq0b'[1,1]',`=`B'/`freq0tau'[1,1]' //Number of bunchers, bunchers share of sample, normalized bunching, excess mass
@@ -207,7 +195,7 @@ program rfbunch, eclass sortpreserve
 			mata: st_numscalar("eresp",eresp)
 			mata: meanbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))/(`bw'*`B')-`cutoff'
 			mata: st_numscalar("meanbunch",meanbunch)
-			mata: meannonbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((0,st_matrix("`cf'")),1),`lower'))/(polyeval(polyinteg((st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((st_matrix("`cf'")),1),`lower'))
+			mata: meannonbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((0,st_matrix("`cf'")),1),`zL'))/(polyeval(polyinteg((st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((st_matrix("`cf'")),1),`zL'))
 			mata: st_numscalar("meannonbunch",meannonbunch)
 			}
 		else {
@@ -215,7 +203,7 @@ program rfbunch, eclass sortpreserve
 			mat `predcut'=`cf'*`cutvals'
 			scalar eresp=(`bw'*`B')/`predcut'[1,1]
 			scalar meanbunch=eresp/2
-			scalar meannonbunch=(`cutoff'-`lower')/2
+			scalar meannonbunch=(`cutoff'-`zL')/2
 			}
 		mat `b'=`b',eresp,meanbunch,meannonbunch //response of marginal buncher
 		
@@ -247,20 +235,20 @@ program rfbunch, eclass sortpreserve
 				}
 				else mat `cutvalsy'=1
 				
-				if `pol`i''>0 reg `var' `rhsvars' 1.`above' 1.`above'#(`rhsvars')  if !inrange(`varlist',`lower',`upper')
-				else reg `var' 1.`above' if !inrange(`varlist',`lower',`upper')
+				if `pol`i''>0 reg `var' `rhsvars' 1.`above' 1.`above'#(`rhsvars')  if !inrange(`varlist',`zL',`zH')
+				else reg `var' 1.`above' if !inrange(`varlist',`zL',`zH')
 				mat `b'=`b',e(b)
 				mat `f'=e(b)
 				if `pol`i''>0 mat `f'=_b[_cons],`f'[1,1..`pol`i'']
 				else mat `f'=_b[_cons]
-				mata:mean_nonbunchers=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`lower'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff')-polyeval(polyinteg(st_matrix("`cf'"),1),`lower'))
+				mata:mean_nonbunchers=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`zL'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff')-polyeval(polyinteg(st_matrix("`cf'"),1),`zL'))
 				mata: st_numscalar("mean_nonbunchers",mean_nonbunchers)
 				local colnames: colnames e(b)
 				loc names `names' `=subinstr("`colnames'","1.`above'","above",.)'
 				forvalues j=1/`=colsof(e(b))' {
 					loc coleq `coleq' `var'
 				}
-				predict double `predy' if inrange(`varlist',`lower',`cutoff'), residuals
+				predict double `predy' if inrange(`varlist',`zL',`cutoff'), residuals
 				su `predy'
 				loc excess=r(sum)
 				drop `predy'
@@ -320,15 +308,15 @@ program rfbunch, eclass sortpreserve
 		ereturn scalar polynomial=`pol'
 		ereturn scalar bandwidth=`bw'
 		ereturn scalar cutoff=`cutoff'
-		ereturn scalar lower_limit=`lower'
-		ereturn scalar upper_limit=`upper'
-		ereturn scalar min=`lo'
-		ereturn scalar max=`hi'
+		ereturn scalar lower_limit=`zL'
+		ereturn scalar upper_limit=`zH'
+		//ereturn scalar min=`lo'
+		//ereturn scalar max=`hi'
 		ereturn local binname `varlist'
 		ereturn local cmd bunch
 		mat colnames `table'=`colfreq'
 		ereturn matrix table=`table'
-		if "`adjust'"!="" {
+		if "`adjust'"!="none"&"`adjust'"!="" {
 			ereturn matrix adj_freq=`adj_freq'
 			ereturn local adjustment="`adjust'"
 			}
@@ -337,6 +325,7 @@ program rfbunch, eclass sortpreserve
 	}
 end
 
+///MATA FUNCTIONS
 mata
 mata clear  
 
@@ -417,40 +406,63 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 		}
 
 		
-	function shifteval(X,lo,hi,upper,k,BM,bw,type,precision,init)
+	function shifteval(real matrix X, real scalar zL,real scalar zH,real scalar k,real scalar BM, real scalar bw,real scalar type, real scalar precision, real scalar init)
 {
+	max=max(X)
 	shift=init
 	for (i=1;i<=precision;i++) {
-			v=1
-			while (v>0)	{	
-				shift=shift+1/10^(i-1)
-				if (type==1) {
-					shiftX=X:*shift*(X:>upper):+X:*(X:<=upper)
-					bin=uniqrows(ceil(shiftX/bw)*bw):-bw/2
-					y=mm_freq(ceil(shiftX/bw)*bw)
-					}
-				else {
-					bin=uniqrows(ceil(X/bw)*bw):-bw/2
-					y=mm_freq(ceil(X/bw)*bw)
-					y=y:*shift*(bin:>upper):+y:*(bin:<=upper)
-					}
-				xbin=J(rows(y),1,1)
-				for (p=1; p<=k; p++) xbin=xbin,bin:^p
-				b=(invsym(cross(xbin,xbin))*cross(xbin,y))'
-				if (type==1) {
-					v=(BM*bw-polyeval(polyinteg(b,1),hi*shift)+polyeval(polyinteg(b,1),lo))
-				}
-				else {
-					v=(BM*bw-polyeval(polyinteg(b,1),hi)+polyeval(polyinteg(b,1),lo))
-				}
-				}
-			shift=shift-1/10^(i-1)
-		}
-	return(shift)
+		v=1
+		while (v>0)	{	
+			shift=shift+1/10^(i-1)
+			data=fill(X,bw,zL,zH,shift,type)
+	    
+			xbin=J(rows(data[.,1]),1,1)
+			
+			for (p=1; p<=k; p++) xbin=xbin,data[.,1]:^p
+			b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
+			
+			if (type==2) v=(BM*bw-polyeval(polyinteg(b,1),max*shift)+polyeval(polyinteg(b,1),zL))
+			else v=(BM*bw-polyeval(polyinteg(b,1),max)+polyeval(polyinteg(b,1),zL))
+			}
+		shift=shift-1/10^(i-1)
 	}
 
+return(b,shift)
+}
+
+function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real scalar shift, real scalar type) 
+	{
+		min=min(X)
+		max=max(X)
+		if (type<2) {
+			fullbin=(1::ceil((zL-min)/bw))*bw:-bw/2 \ (1::ceil((max-zH)/bw))*bw:-bw/2 :+ zH
+			bin=ceil(X/bw)*bw:-bw/2
+			y=(1+(type==1)*(shift-1)):*mm_freq(bin)
+		}
+		else {
+			fullbin=(1::ceil((zL-min)/bw))*bw:-bw/2 \ (1::ceil((max*shift-zH*shift)/bw)):*bw:+zH*shift:-bw/2
+			bin=(((ceil(X:/bw):*bw):-bw/2):*(X:<=zH) :+ (X:>zH):*((ceil((shift:*X:-shift*zH):/bw):*bw):+zH*shift-bw/2))
+			y=mm_freq(bin)
+		}
+		bin=uniqrows(bin)
+		if (rows(y)==rows(fullbin)) {
+				 fully=y
+			}
+		else {
+			fully=J(rows(fullbin),1,.)
+			l=1
+			for (j=1;j<=rows(fullbin);j++) {
+				if (abs(bin[l]-fullbin[j])<bw/10) {
+					fully[j]=y[l]
+					l=l+1
+				}
+				else {
+					fully[j]=0
+				}
+			}
+		}	
+		return(fullbin,fully)
+		}
+	
 	
 end
-		
-
-		
