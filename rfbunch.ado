@@ -51,7 +51,7 @@ program rfbunch, eclass sortpreserve
 			}
 		if "`adjust'"=="x" loc type=2
 		else if "`adjust'"=="y" loc type=1
-		else loc type==0
+		else loc type=0
 		
 		if "`limits'"!="" {
 			gettoken L H: limits
