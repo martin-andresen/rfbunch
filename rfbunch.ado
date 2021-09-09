@@ -219,8 +219,7 @@ program rfbunch, eclass sortpreserve
 			drop if !`touse'
 			keep `varlist' `yvars'
 			
-			tempname means integerbin freqz
-			if "`fill'"!="nofill" mat `freqz'=`table'
+			tempname means integerbin
 			tempvar predy f0 f1 f above fabove mean_b_cf
 			gen `bin'=ceil((`varlist'-`cutoff')/`bw')*`bw'+`cutoff'-`bw'/2
 			sort `bin'
@@ -266,12 +265,6 @@ program rfbunch, eclass sortpreserve
 				
 				reg `var' ibn.`integerbin', nocons
 				mat `means'=e(b)
-				
-				if "`fill'"!="nofill" {
-					forvalues j=1/`=rowsof(`freqz')' {
-						if `freqz'[`j',1]==
-					}
-				}
 				
 				mat `table'=`table',`means''
 				loc colfreq `colfreq' `var':b
