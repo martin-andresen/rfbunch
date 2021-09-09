@@ -1,10 +1,13 @@
+*! rfbunchplot version date 20210907
+* Author: Martin Eckhoff Andresen
+* This program is part of the rfbunch package.
 cap prog drop rfbunchplot
 	program rfbunchplot
 	
 	syntax [name], [graph_opts(string) parameters(string) noci nostar adjust limit(numlist min=2 max=2) weight]
 	
 	quietly {
-		if "`=e(cmd)'"!="bunch" {
+		if "`=e(cmd)'"!="rfbunch" {
 			noi di in red "Estimates in memory not created by bunch"
 			exit
 			}
