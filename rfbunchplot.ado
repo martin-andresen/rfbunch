@@ -8,7 +8,7 @@ cap prog drop rfbunchplot
 	
 	quietly {
 		if "`=e(cmd)'"!="rfbunch" {
-			noi di in red "Estimates in memory not created by bunch"
+			noi di in red "Estimates in memory not created by rfbunch"
 			exit
 			}
 			
