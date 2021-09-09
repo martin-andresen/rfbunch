@@ -1,5 +1,5 @@
 //rfbunch.ado, bunching estimation for firms by Martin Eckhoff Andresen
-!version 0.95
+!version 0.96
 cap prog drop rfbunch
 program rfbunch, eclass sortpreserve
 	syntax varlist(min=1) [if] [in],  CUToff(real) bw(real) [ ///
@@ -10,6 +10,7 @@ program rfbunch, eclass sortpreserve
 	init(numlist min=1 max=2 >0) ///
 	POLynomial(numlist min=0 integer >=0) ///
 	ADJust(string) ///
+	nofill ///
 	constant ]
 	
 	quietly {
@@ -65,6 +66,8 @@ program rfbunch, eclass sortpreserve
 		loc zL=`cutoff'-`L'*`bw'
 		loc zH=`cutoff'+`H'*`bw'
 		
+		if "`fill'"=="nofill" loc fill=0
+		else loc fill=1
 		
 		//check tcr, kink, notch options
 		if "`tcr'"!="" {
@@ -157,13 +160,13 @@ program rfbunch, eclass sortpreserve
 		loc coleq `coleq' counterfactual_frequency
 		mat `cutvals'=1 \ `cutvals'
 		
-		mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`zH',`zH',1,0))
+		mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`zH',`zH',1,0,`fill',`cutoff'))
 		
 		//Get countefactual and adjust, if using
 		if inlist("`adjust'","x","y") {
-			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`pol',`BM',`bw',`type',10,1)
+			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`pol',`BM',`bw',`type',10,1,`fill',`cutoff')
 			mata: st_matrix("`b'",shift)
-			mata: st_matrix("`adj_freq'",fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',`=`b'[1,`=colsof(`b')']',`type'))
+			mata: st_matrix("`adj_freq'",fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',`=`b'[1,`=colsof(`b')']',`type',`fill',`cutoff'))
 			mat `cf'=`b'[1,1..`=colsof(`b')-1']
 			mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
 			fvexpand `rhsvars'
@@ -171,13 +174,13 @@ program rfbunch, eclass sortpreserve
 			loc coleq `coleq' bunching
 			}
 		else {
-			mata: data=fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',1,0)
+			mata: data=fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',1,0,`fill',`cutoff')
 			mata: xbin=J(rows(data[.,1]),1,1)
 			mata: for (p=1; p<=`pol'; p++) xbin=xbin,data[.,1]:^p
 			mata: b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
 			mata: st_matrix("`b'",b)
-			mat `cf'=`b'[1,1..`=colsof(`b')-1']
-			mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
+			mat `cf'=`b'
+			mat `b'=`b'[1,2..`=colsof(`b')'],`b'[1,1]
 			fvexpand `rhsvars'
 			loc names `r(varlist)' _cons
 		}
@@ -215,9 +218,10 @@ program rfbunch, eclass sortpreserve
 			drop if !`touse'
 			keep `varlist' `yvars'
 			
-			tempname means integerbin
+			tempname means integerbin freqz
+			if "`fill'"!="nofill" mat `freqz'=`table'
 			tempvar predy f0 f1 f above fabove mean_b_cf
-			gen `bin'=-floor((`cutoff'-`varlist')/`bw')*`bw'+`cutoff'-`bw'/2
+			gen `bin'=ceil((`varlist'-`cutoff')/`bw')*`bw'+`cutoff'-`bw'/2
 			sort `bin'
 			egen `integerbin'=group(`bin')
 			gen `above'=`varlist'>`cutoff'
@@ -261,6 +265,12 @@ program rfbunch, eclass sortpreserve
 				
 				reg `var' ibn.`integerbin', nocons
 				mat `means'=e(b)
+				
+				if "`fill'"!="nofill" {
+					forvalues j=1/`=rowsof(`freqz')' {
+						if `freqz'[`j',1]==
+					}
+				}
 				
 				mat `table'=`table',`means''
 				loc colfreq `colfreq' `var':b
@@ -406,7 +416,7 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 		}
 
 		
-	function shifteval(real matrix X, real scalar zL,real scalar zH,real scalar k,real scalar BM, real scalar bw,real scalar type, real scalar precision, real scalar init)
+	function shifteval(real matrix X, real scalar zL,real scalar zH,real scalar k,real scalar BM, real scalar bw,real scalar type, real scalar precision, real scalar init,real scalar fill,cutoff)
 {
 	max=max(X)
 	shift=init
@@ -414,7 +424,7 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 		v=1
 		while (v>0)	{	
 			shift=shift+1/10^(i-1)
-			data=fill(X,bw,zL,zH,shift,type)
+			data=fill(X,bw,zL,zH,shift,type,fill,cutoff)
 	    
 			xbin=J(rows(data[.,1]),1,1)
 			
@@ -429,40 +439,43 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 
 return(b,shift)
 }
-
-function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real scalar shift, real scalar type) 
+function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real scalar shift, real scalar type,fill,cutoff) 
 	{
 		min=min(X)
 		max=max(X)
 		if (type<2) {
-			fullbin=(1::ceil((zL-min)/bw))*bw:-bw/2 \ (1::ceil((max-zH)/bw))*bw:-bw/2 :+ zH
-			bin=ceil(X/bw)*bw:-bw/2
+			bin=ceil((X:-cutoff)/bw):*bw:+cutoff:-bw/2
 			y=(1+(type==1)*(shift-1)):*mm_freq(bin)
 		}
 		else {
-			fullbin=(1::ceil((zL-min)/bw))*bw:-bw/2 \ (1::ceil((max*shift-zH*shift)/bw)):*bw:+zH*shift:-bw/2
-			bin=(((ceil(X:/bw):*bw):-bw/2):*(X:<=zH) :+ (X:>zH):*((ceil((shift:*X:-shift*zH):/bw):*bw):+zH*shift-bw/2))
+			bin=(X:<=zH):*(ceil((X:-cutoff)/bw)*bw:+cutoff:-bw/2) :+ ((X:>zH):*(ceil(shift:*(X:-zH):/bw):*bw:+zH*shift:-bw/2))
 			y=mm_freq(bin)
 		}
 		bin=uniqrows(bin)
-		if (rows(y)==rows(fullbin)) {
+		if (fill==1) {
+			if (type<2) fullbin=	(zL:-(ceil((cutoff-min)/bw)-2::ceil(min/bw)-1):*bw:-bw/2) \ (cutoff:+(1::ceil((max-cutoff)/bw)):*bw:-bw/2)
+			else fullbin=			(zL:-(ceil((cutoff-min)/bw)-2::ceil(min/bw)-1):*bw:-bw/2) \ (ceil(shift*zH:/bw)::ceil(shift*max:/bw)):*bw:-ceil(shift*zH:/bw):*bw:+shift*zH+bw/2
+			if (rows(y)==rows(fullbin)) {
 				 fully=y
-			}
-		else {
-			fully=J(rows(fullbin),1,.)
-			l=1
-			for (j=1;j<=rows(fullbin);j++) {
-				if (abs(bin[l]-fullbin[j])<bw/10) {
-					fully[j]=y[l]
-					l=l+1
 				}
-				else {
-					fully[j]=0
+			else {
+				fully=J(rows(fullbin),1,.)
+				l=1
+				for (j=1;j<=rows(fullbin);j++) {
+					if (abs(bin[l]-fullbin[j])<bw/10) {
+						fully[j]=y[l]
+						l=l+1
+					}
+					else {
+						fully[j]=0
+					}
 				}
 			}
-		}	
 		return(fullbin,fully)
 		}
+		else return(bin,y)
+		}
+
 	
-	
+
 end
