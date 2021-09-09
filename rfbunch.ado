@@ -456,7 +456,7 @@ function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real 
 		bin=uniqrows(bin)
 		if (fill==1) {
 			if (type<2) fullbin=	(zL:-(ceil(zL/bw)-1::ceil(min/bw)):*bw:+ceil(min/bw):*bw-bw/2) \ (cutoff:+(1::ceil((max-cutoff)/bw)):*bw:-bw/2)
-			else fullbin=			(zL:-(ceil(zL/bw)-1::ceil(min/bw)):*bw:+ceil(min/bw):*bw-bw/2) \ (ceil(shift*zH:/bw)::ceil(shift*max:/bw)-1):*bw:-ceil(shift*zH:/bw):*bw:+shift*zH+bw/2
+			else fullbin=			(zL:-(ceil(zL/bw)-1::ceil(min/bw)):*bw:+ceil(min/bw):*bw-bw/2) \ (ceil(shift*zH:/bw)::ceil(shift*max:/bw)):*bw:-ceil(shift*zH:/bw):*bw:+shift*zH+bw/2
 			if (rows(y)==rows(fullbin)) {
 				 fully=y
 				}
