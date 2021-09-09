@@ -323,7 +323,7 @@ program rfbunch, eclass sortpreserve
 		//ereturn scalar min=`lo'
 		//ereturn scalar max=`hi'
 		ereturn local binname `varlist'
-		ereturn local cmd bunch
+		ereturn local cmd rfbunch
 		mat colnames `table'=`colfreq'
 		ereturn matrix table=`table'
 		if "`adjust'"!="none"&"`adjust'"!="" {
