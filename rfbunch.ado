@@ -1,6 +1,5 @@
-*! rfbunch version date 20210907
-* Author: Martin Eckhoff Andresen
-* This program is part of the rfbunch package.
+//rfbunch.ado, bunching estimation for firms by Martin Eckhoff Andresen
+!version 0.96
 cap prog drop rfbunch
 program rfbunch, eclass sortpreserve
 	syntax varlist(min=1) [if] [in],  CUToff(real) bw(real) [ ///
@@ -324,8 +323,7 @@ program rfbunch, eclass sortpreserve
 		//ereturn scalar min=`lo'
 		//ereturn scalar max=`hi'
 		ereturn local binname `varlist'
-		ereturn local indepvars `yvars'
-		ereturn local cmd rfbunch
+		ereturn local cmd bunch
 		mat colnames `table'=`colfreq'
 		ereturn matrix table=`table'
 		if "`adjust'"!="none"&"`adjust'"!="" {
@@ -456,7 +454,8 @@ function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real 
 		bin=uniqrows(bin)
 		if (fill==1) {
 			if (type<2) fullbin=	(zL:-(ceil(zL/bw)-1::ceil(min/bw)):*bw:+ceil(min/bw):*bw-bw/2) \ (cutoff:+(1::ceil((max-cutoff)/bw)):*bw:-bw/2)
-			else fullbin=			(zL:-(ceil(zL/bw)-1::ceil(min/bw)):*bw:+ceil(min/bw):*bw-bw/2) \ (ceil(shift*zH:/bw)::ceil(shift*max:/bw)):*bw:-ceil(shift*zH:/bw):*bw:+shift*zH+bw/2
+		
+			else fullbin=	(zL:-(ceil(zL/bw)-1::ceil(min/bw)):*bw:+ceil(min/bw):*bw-bw/2) \ ((ceil(shift*zH:/bw)::ceil(shift*max:/bw)-1):*bw:-ceil(shift*zH:/bw):*bw:+shift*zH+bw/2)
 			if (rows(y)==rows(fullbin)) {
 				 fully=y
 				}
@@ -475,6 +474,7 @@ function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real 
 			}
 		return(fullbin,fully)
 		}
+		
 		else return(bin,y)
 		}
 
