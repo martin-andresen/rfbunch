@@ -1,4 +1,4 @@
-*! rfbunchplot version date 20210907
+*! rfbunchplot version date 20210914
 * Author: Martin Eckhoff Andresen
 * This program is part of the rfbunch package.
 cap prog drop rfbunchplot
@@ -133,6 +133,17 @@ cap prog drop rfbunchplot
 			if "`namelist'"=="`e(binname)'" {
 				loc lines (line `f0' `e(binname)', color(maroon))
 				loc background (bar frequency `e(binname)', color(navy%50) barwidth(`=e(bandwidth)')) 
+				loc ytitle frequency
+				
+				if "`adjust'"=="" {
+					if "`ci'"=="noci" loc labels label(1 "observed") label(2 "estimated counterfactual") order(1 2)
+					else loc labels label(1 "95% CI") label(2 "observed") label(3 "estimated counterfactual") order(2 3 1) cols(3)
+				}
+				else {
+					if "`ci'"=="noci" loc labels label(1 "observed") label(2 "adjusted") label(3 "estimated counterfactual") order(1 2 3) cols(3)
+					else loc labels label(1 "95% CI") label(2 "observed") label(3 "adjusted") label(4 "estimated counterfactual") order(2 3 4 1) cols(2)
+				}
+				
 			}
 			else {
 				loc lines (line `f0' `e(binname)' if `e(binname)'<=`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`=_b[bunching:marginal_response]'+`=e(cutoff)''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`e(cutoff)', color(maroon))
@@ -160,15 +171,7 @@ cap prog drop rfbunchplot
 			loc ytitle `namelist'
 			}
 			else {
-				if "`adjust'"=="" {
-					if "`ci'"=="noci" loc labels label(1 "observed") label(2 "estimated counterfactual") order(1 2)
-					else loc labels label(1 "95% CI") label(2 "observed") label(3 "estimated counterfactual") order(2 3 1) cols(3)
-				}
-			else {
-				if "`ci'"=="noci" loc labels label(1 "observed") label(2 "adjusted") label(3 "estimated counterfactual") order(1 2 3) cols(3)
-				else loc labels label(1 "95% CI") label(2 "observed") label(3 "adjusted") label(4 "estimated counterfactual") order(2 3 4 1) cols(2)
-			}
-				loc ytitle frequency
+
 			}
 			
 			if "`namelist'"=="`=e(binname)'" {

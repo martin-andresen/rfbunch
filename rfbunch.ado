@@ -1,4 +1,4 @@
-*! rfbunch version date 20210907
+*! rfbunch version date 20210914
 * Author: Martin Eckhoff Andresen
 * This program is part of the rfbunch package.
 cap prog drop rfbunch
