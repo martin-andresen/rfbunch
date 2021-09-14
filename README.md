@@ -1,5 +1,5 @@
 # rfbunch
-Reduced form bunching estimation with multiple response variables in Stata
+Reduced form bunching estimation with multiple response variables in Stata. In development, bugs are likely. Report through GitHub or martin.eckhoff.andresen@gmail.com
 
 ![rfbunch example1](https://github.com/martin-andresen/rfbunch/blob/master/ex1.png)
 ![rfbunch example2](https://github.com/martin-andresen/rfbunch/blob/master/ex2.png)
