@@ -18,8 +18,8 @@ program rfbunch, eclass sortpreserve
 
 		//check options
 		gettoken varlist yvars: varlist
-		if "`pol'"=="" {
-			loc pol=7
+		if "`polynomial'"=="" {
+			loc polynomial=7
 			loc i=0
 			foreach yvar in `yvars' {
 				loc ++i
@@ -27,9 +27,9 @@ program rfbunch, eclass sortpreserve
 				}
 			}	
 		else {
-			gettoken pol poly: pol
+			gettoken polynomial poly: polynomial
 			loc i=0
-			loc last=`pol'
+			loc last=`polynomial'
 			foreach yvar in `yvars' {
 				loc ++i
 				if "`poly'"!="" {
@@ -39,6 +39,7 @@ program rfbunch, eclass sortpreserve
 				else loc pol`i'=`last'
 				}
 			}
+
 		cap which moremata.hlp 
 		if _rc!=0 {
 			noi di in red "moremata needed. Install using "ssc install moremata"".
@@ -159,7 +160,7 @@ program rfbunch, eclass sortpreserve
 		} 
 		else loc hole=0
 		
-		forvalues i=1/`pol' {
+		forvalues i=1/`polynomial' {
 			if "`rhsvars'"=="" loc rhsvars  c.`varlist'
 			else loc rhsvars `rhsvars'##c.`varlist'
 			mat `cutvals'=nullmat(`cutvals') \ `cutoff'^`i'
@@ -173,7 +174,7 @@ program rfbunch, eclass sortpreserve
 		
 		//Get counterfactual and adjust, if using
 		if inlist("`adjust'","x","y") {
-			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`pol',`BM',`bw',`type',10,1,`fill',`cutoff',`hole')
+			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`polynomial',`BM',`bw',`type',10,1,`fill',`cutoff',`hole')
 			mata: st_matrix("`b'",shift)
 			mata: st_matrix("`adj_freq'",fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',`=`b'[1,`=colsof(`b')']',`type',`fill',`cutoff',`hole'))
 			mat `cf'=`b'[1,1..`=colsof(`b')-1']
@@ -186,7 +187,7 @@ program rfbunch, eclass sortpreserve
 		else {
 			mata: data=fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',1,0,`fill',`cutoff',`hole'')
 			mata: xbin=J(rows(data[.,1]),1,1)
-			mata: for (p=1; p<=`pol'; p++) xbin=xbin,data[.,1]:^p
+			mata: for (p=1; p<=`polynomial'; p++) xbin=xbin,data[.,1]:^p
 			mata: b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
 			mata: st_matrix("`b'",b)
 			mat `cf'=`b'
@@ -325,7 +326,7 @@ program rfbunch, eclass sortpreserve
 		mat coleq `b'=`coleq'
 
 		eret post `b', esample(`touse') obs(`N')
-		ereturn scalar polynomial=`pol'
+		ereturn scalar polynomial=`polynomial'
 		ereturn scalar bandwidth=`bw'
 		ereturn scalar cutoff=`cutoff'
 		ereturn scalar lower_limit=`zL'
