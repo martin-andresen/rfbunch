@@ -283,7 +283,7 @@ program rfbunch, eclass sortpreserve
 				mat `means'=e(b)
 				
 				mat `table'=`table',`means''
-				loc colfreq `colfreq' `var':b
+				loc colfreq `colfreq' `var'
 				}
 			restore
 			}

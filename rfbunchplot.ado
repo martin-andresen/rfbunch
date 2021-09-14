@@ -147,7 +147,7 @@ cap prog drop rfbunchplot
 			}
 			else {
 				loc lines (line `f0' `e(binname)' if `e(binname)'<=`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`=_b[bunching:marginal_response]'+`=e(cutoff)''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`e(cutoff)', color(maroon))
-				loc background (scatter `namelist'b `e(binname)' `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist'b `e(binname)' `weight' if inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(maroon))
+				loc background (scatter _`namelist' `e(binname)' `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter _`namelist' `e(binname)' `weight' if inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(maroon))
 		
 				gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
 				replace x=`=e(cutoff)'+_b[bunching:average_response] in 2
