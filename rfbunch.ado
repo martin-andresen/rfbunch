@@ -282,9 +282,6 @@ program rfbunch, eclass sortpreserve
 				reg `var' ibn.`integerbin', nocons
 				mat `means'=e(b)
 				
-				noi mat li `table'
-				noi mat li `means'
-				noi tab `bin'
 				mat `table'=`table',`means''
 				loc colfreq `colfreq' `var':b
 				}
@@ -306,7 +303,7 @@ program rfbunch, eclass sortpreserve
 			loc coleq `coleq' tcr tcr tcr tcr
 		}
 		if "`kink'"!="" {
-			mat `b'=`b',`=`=(`B'*`bw')/`freq0tau'[1,1]' / ( `cutoff'*(ln((1-`t0_kink')/(1-`t1_kink'))))'
+			mat `b'=`b',`=ln(`=eresp'/`cutoff'+1)/(ln(1-`t0_kink')-ln(1-`t1_kink'))'
 			loc names `names' elasticity
 			loc coleq `coleq' kink
 		}	
@@ -469,8 +466,8 @@ function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real 
 		}
 		bin=uniqrows(bin)
 		if (fill==1) {
-			if (type<2&hole==0) fullbin=	((zL:-(ceil((zL-min)/bw)::1):*bw) \ (zH:+(1::floor((max-zH)/bw)):*bw)):+bw/2
-			else fullbin=			((zL:-(ceil((zL-min)/bw)::1):*bw) \ (shift*zH:+(0::floor(shift*(max-zH)/bw)):*bw)):+bw/2
+			if (type<2&hole==0) fullbin=		((zL:-(ceil((zL-min)/bw)::1):*bw) \ (zH:+(0::floor((max-zH)/bw)):*bw)):+bw/2
+			else fullbin=						((zL:-(ceil((zL-min)/bw)::1):*bw) \ (shift*zH:+(0::floor(shift*(max-zH)/bw)):*bw)):+bw/2
 			if (rows(y)==rows(fullbin)) {
 				 fully=y
 				}
