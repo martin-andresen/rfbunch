@@ -59,10 +59,28 @@ If alternative endogenous variables are specified, for each of them rfbunch esti
  below and above the cutoff and then backs out estimates of the mean of this variable 
  a) among nonbuchers in the bunching region, b) among bunchers and c) for bunchers' 
  counterfactual allocation.
-
+ 
 {pstd}
 rfbunch does not report standard errors, but standard errors can easily be obtained 
 by using bootstrap.
+
+{pstd}
+If any of the structural options tcr(), notch() or kink() are specified, rfbunch treats data
+as coming from one of these models and estimate structural elasticities.
+
+{pstd}
+If kink(t0 t1) is specified, user needs to provide the tax rates below (t0) and above(t1) the cutoff,
+both real numbers between 0 and 1. rfbunch then computes the elasticity by solving equation (3) in Saez (2010)
+numerically.
+
+{pstd}
+If notch(t0 t1 [deltaT]) is specified, user needs to provide the tax rates below (t0) and above(t1) the cutoff,
+as well as an optional lump sum tax deltaT>0. Tax rates must be real numbers between 0 and 1. Lump sum tax must be real number >=0. 
+rfbunch then computes the elasticity by solving equation (5) in Kleven and Waseem (2013) numerically.
+
+{pstd}
+If tcr(t eta r) is specified, user needs to provide the corporate tax rate (t), allowance (eta) and cost of equity,
+rfbunch then computes the elasticities from Andresen and Thorvaldsen (2021) numerically. In development, use with care. 
 
 {marker saved_results}{...}
 {title:Stored results}

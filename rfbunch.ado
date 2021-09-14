@@ -151,6 +151,14 @@ program rfbunch, eclass sortpreserve
 		loc colfreq `varlist' frequency
 		gen `useobs' = `varlist'<=`zL'|`varlist'>`zH'
 		
+		su `varlist' if `varlist'>`cutoff'
+		if ((r(min)>`cutoff'+`bw')) {
+			noi di as text "Hole detected above cutoff."
+			loc hole=1
+			loc minabove=r(min)
+		} 
+		else loc hole=0
+		
 		forvalues i=1/`pol' {
 			if "`rhsvars'"=="" loc rhsvars  c.`varlist'
 			else loc rhsvars `rhsvars'##c.`varlist'
@@ -161,21 +169,22 @@ program rfbunch, eclass sortpreserve
 		loc coleq `coleq' counterfactual_frequency
 		mat `cutvals'=1 \ `cutvals'
 		
-		mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`zH',`zH',1,0,`fill',`cutoff'))
+		mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`zH',1,`type',0,`cutoff',`hole'))
 		
-		//Get countefactual and adjust, if using
+		//Get counterfactual and adjust, if using
 		if inlist("`adjust'","x","y") {
-			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`pol',`BM',`bw',`type',10,1,`fill',`cutoff')
+			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`pol',`BM',`bw',`type',10,1,`fill',`cutoff',`hole')
 			mata: st_matrix("`b'",shift)
-			mata: st_matrix("`adj_freq'",fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',`=`b'[1,`=colsof(`b')']',`type',`fill',`cutoff'))
+			mata: st_matrix("`adj_freq'",fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',`=`b'[1,`=colsof(`b')']',`type',`fill',`cutoff',`hole'))
 			mat `cf'=`b'[1,1..`=colsof(`b')-1']
 			mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
+			scalar shift=`b'[1,`=colsof(`b')']
 			fvexpand `rhsvars'
 			loc names `r(varlist)' _cons  shift
 			loc coleq `coleq' bunching
 			}
 		else {
-			mata: data=fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',1,0,`fill',`cutoff')
+			mata: data=fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',1,0,`fill',`cutoff',`hole'')
 			mata: xbin=J(rows(data[.,1]),1,1)
 			mata: for (p=1; p<=`pol'; p++) xbin=xbin,data[.,1]:^p
 			mata: b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
@@ -215,15 +224,22 @@ program rfbunch, eclass sortpreserve
 	
 		//ESTIMATE REPONSE ALONG OTHER ENDOGENOUS VARS
 		if "`yvars'"!="" {
+			
+			
+			
 			preserve
 			drop if !`touse'
 			keep `varlist' `yvars'
 			
 			tempname means integerbin
 			tempvar predy f0 f1 f above fabove mean_b_cf
-			gen `bin'=ceil((`varlist'-`cutoff')/`bw')*`bw'+`cutoff'-`bw'/2
+			
+			
+			if `type'<2&`hole'==0 gen `bin'=ceil((`varlist'-`cutoff')/`bw')*`bw'+`cutoff'-`bw'/2 if `type'
+			else gen `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff')/`bw')*`bw'+`cutoff'-`bw'/2) + (`varlist'>`cutoff')*(floor((`varlist'-`minabove')/`bw')*`bw'+`minabove'+`bw'/2)			
 			sort `bin'
 			egen `integerbin'=group(`bin')
+			
 			gen `above'=`varlist'>`cutoff'
 			loc i=0
 			foreach var in `yvars' {
@@ -266,6 +282,9 @@ program rfbunch, eclass sortpreserve
 				reg `var' ibn.`integerbin', nocons
 				mat `means'=e(b)
 				
+				noi mat li `table'
+				noi mat li `means'
+				noi tab `bin'
 				mat `table'=`table',`means''
 				loc colfreq `colfreq' `var':b
 				}
@@ -316,15 +335,16 @@ program rfbunch, eclass sortpreserve
 		ereturn scalar upper_limit=`zH'
 		//ereturn scalar min=`lo'
 		//ereturn scalar max=`hi'
+		
 		ereturn local binname `varlist'
 		ereturn local indepvars `yvars'
-		ereturn local cmd rfbunch
 		mat colnames `table'=`colfreq'
 		ereturn matrix table=`table'
 		if "`adjust'"!="none"&"`adjust'"!="" {
 			ereturn matrix adj_freq=`adj_freq'
 			ereturn local adjustment="`adjust'"
 			}
+		ereturn local cmdname "rfbunch"
 		noi eret di
 
 	}
@@ -411,7 +431,7 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 		}
 
 		
-	function shifteval(real matrix X, real scalar zL,real scalar zH,real scalar k,real scalar BM, real scalar bw,real scalar type, real scalar precision, real scalar init,real scalar fill,cutoff)
+	function shifteval(real matrix X, real scalar zL,real scalar zH,real scalar k,real scalar BM, real scalar bw,real scalar type, real scalar precision, real scalar init,real scalar fill,cutoff,hole)
 {
 	max=max(X)
 	shift=init
@@ -419,7 +439,7 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 		v=1
 		while (v>0)	{	
 			shift=shift+1/10^(i-1)
-			data=fill(X,bw,zL,zH,shift,type,fill,cutoff)
+			data=fill(X,bw,zL,zH,shift,type,fill,cutoff,hole)
 	    
 			xbin=J(rows(data[.,1]),1,1)
 			
@@ -434,22 +454,23 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 
 return(b,shift)
 }
-function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real scalar shift, real scalar type,fill,cutoff) 
+function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real scalar shift, real scalar type,fill,cutoff,hole) 
 	{
 		min=min(X)
 		max=max(X)
-		if (type<2) {
+		if (hole==1) zH=min(select(X,X:>cutoff))
+		if (type<2&hole==0) {
 			bin=ceil((X:-cutoff)/bw):*bw:+cutoff:-bw/2
 			y=(1+(type==1)*(shift-1)):*mm_freq(bin)
 		}
 		else {
-			bin=(X:<=zH):*(ceil((X:-cutoff)/bw)*bw:+cutoff:-bw/2) :+ ((X:>zH):*(ceil(shift:*(X:-zH):/bw):*bw:+zH*shift:-bw/2))
+			bin=(X:<=cutoff):*(ceil((X:-cutoff)/bw)*bw:+cutoff:-bw/2) :+ ((X:>cutoff):*(floor(shift:*(X:-zH):/bw):*bw:+zH*shift:+bw/2))
 			y=mm_freq(bin)
 		}
 		bin=uniqrows(bin)
 		if (fill==1) {
-			if (type<2) fullbin=	((zL:-(floor((zL-min)/bw)::0):*bw) \ (cutoff:+(1::ceil((max-zH)/bw)):*bw)):-bw/2
-			else fullbin=			((zL:-(floor((zL-min)/bw)::0):*bw) \ (shift*cutoff:+(1::ceil(shift*(max-zH)/bw)):*bw)):-bw/2
+			if (type<2&hole==0) fullbin=	((zL:-(ceil((zL-min)/bw)::1):*bw) \ (zH:+(1::floor((max-zH)/bw)):*bw)):+bw/2
+			else fullbin=			((zL:-(ceil((zL-min)/bw)::1):*bw) \ (shift*zH:+(0::floor(shift*(max-zH)/bw)):*bw)):+bw/2
 			if (rows(y)==rows(fullbin)) {
 				 fully=y
 				}
