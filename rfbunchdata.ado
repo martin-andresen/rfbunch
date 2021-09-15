@@ -3,8 +3,9 @@
 * This program is part of the rfbunch package.
 cap prog drop rfbunchdata
 	program rfbunchdata, rclass
-	syntax [name], eta(numlist max=1 min=1 >=0 <=1)	t(numlist max=1 min=1  >=0 <=1) cut(numlist max=1 min=1) e(numlist max=1 min=1  >=0) mu(numlist max=1 min=1  >=0) r(numlist max=1 min=1 >=0) [obs(integer 5000) dist(string)]
-	
+	syntax [name], eta(numlist max=1 min=1 >=0 <=1)	t(numlist max=1 min=1  >=0 <=1) cut(numlist max=1 min=1) e(numlist max=1 min=1  >=0) mu(numlist max=1 min=1  >=0) r(numlist max=1 min=1 >=0) [obs(integer 5000) dist(string) seed(numlist min=1 max=1 integer)]
+		
+	if "`seed'"!="" set seed `seed'
 	if "`namelist'"=="" loc namelist debtcost
 	if "`dist'"=="" loc dist rbeta(2,5)
 	
