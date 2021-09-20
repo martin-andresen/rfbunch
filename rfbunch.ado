@@ -159,6 +159,9 @@ program rfbunch, eclass sortpreserve
 			loc minabove=r(min)
 		} 
 		else loc hole=0
+		if "`adjust'"!=""|`hole'==1 {
+			loc minabove=r(min)
+		}
 		
 		forvalues i=1/`polynomial' {
 			if "`rhsvars'"=="" loc rhsvars  c.`varlist'
