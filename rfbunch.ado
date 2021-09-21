@@ -1,4 +1,4 @@
-*! rfbunch version date 20210920
+*! rfbunch version date 20210921
 * Author: Martin Eckhoff Andresen
 * This program is part of the rfbunch package.
 cap prog drop rfbunch
@@ -207,21 +207,30 @@ program rfbunch, eclass sortpreserve
 		loc coleq `coleq' bunching bunching bunching bunching bunching bunching bunching
 		loc names `names' number_bunchers share_sample normalized_bunching excess_mass marginal_response average_response mean_nonbunchers
 		
+		if `B'<0 {
+		Noi di "Negative estimates of B - no bunchign in the bunching region. Earnings response and counterfactual mean among bunchers cannot be calculated."
+		scalar eresp=.
+		scalar mean=.
+		}
+		else {
+			if "`constant'"!="constant" {
+				mata: eresp=eresp(`B',`cutoff',st_matrix("`cf'"),`bw')
+				mata: st_numscalar("eresp",eresp)
+				mata: meanbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))/(`bw'*`B')-`cutoff'
+				mata: st_numscalar("meanbunch",meanbunch)
+				}
+			else {
+				tempname predcut
+				mat `predcut'=`cf'*`cutvals'
+				scalar eresp=(`bw'*`B')/`predcut'[1,1]
+				scalar meanbunch=eresp/2
+				}
+			}
 		if "`constant'"!="constant" {
-			mata: eresp=eresp(`B',`cutoff',st_matrix("`cf'"),`bw')
-			mata: st_numscalar("eresp",eresp)
-			mata: meanbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))/(`bw'*`B')-`cutoff'
-			mata: st_numscalar("meanbunch",meanbunch)
 			mata: meannonbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((0,st_matrix("`cf'")),1),`zL'))/(polyeval(polyinteg((st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((st_matrix("`cf'")),1),`zL'))
 			mata: st_numscalar("meannonbunch",meannonbunch)
 			}
-		else {
-			tempname predcut
-			mat `predcut'=`cf'*`cutvals'
-			scalar eresp=(`bw'*`B')/`predcut'[1,1]
-			scalar meanbunch=eresp/2
-			scalar meannonbunch=(`cutoff'-`zL')/2
-			}
+		else scalar meannonbunch=(`cutoff'-`zL')/2
 		mat `b'=`b',eresp,meanbunch,meannonbunch //response of marginal buncher
 		
 		restore
