@@ -470,11 +470,11 @@ function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real 
 		max=max(X)
 		if (hole==1) zH=min(select(X,X:>cutoff))
 		if (type<2&hole==0) {
-			bin=ceil((X:-cutoff)/bw):*bw:+cutoff:-bw/2
+			bin=ceil((X:-cutoff-2^-23)/bw):*bw:+cutoff:-bw/2
 			y=(1+(type==1)*(shift-1)):*mm_freq(bin)
 		}
 		else {
-			bin=(X:<=cutoff):*(ceil((X:-cutoff)/bw)*bw:+cutoff:-bw/2) :+ ((X:>cutoff):*(floor(shift:*(X:-zH):/bw):*bw:+zH*shift:+bw/2))
+			bin=(X:<=cutoff):*(ceil((X:-cutoff-2^-23)/bw)*bw:+cutoff:-bw/2) :+ ((X:>cutoff):*(floor(shift:*(X:-zH+2^-23):/bw):*bw:+zH*shift*:+bw/2))
 			y=mm_freq(bin)
 		}
 		bin=uniqrows(bin)
