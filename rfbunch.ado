@@ -219,7 +219,7 @@ program rfbunch, eclass sortpreserve
 				mata: meanbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))/(`bw'*`B')-`cutoff'
 				mata: totalresponse=(1/`bw')*(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))-`cutoff'*`B'
 				mata: st_numscalar("meanbunch",meanbunch)
-				mata: st_numscalar("totealresponse",totalresponse)
+				mata: st_numscalar("totalresponse",totalresponse)
 				}
 			else {
 				tempname predcut
@@ -463,17 +463,18 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 
 return(b,shift)
 }
+
 function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real scalar shift, real scalar type,fill,cutoff,hole) 
 	{
 		min=min(X)
 		max=max(X)
 		if (hole==1) zH=min(select(X,X:>cutoff))
 		if (type<2&hole==0) {
-			bin=ceil((X:-cutoff-2^-23)/bw):*bw:+cutoff:-bw/2
+			bin=ceil((X:-cutoff:-2^-23)/bw):*bw:+cutoff:-bw/2
 			y=(1+(type==1)*(shift-1)):*mm_freq(bin)
 		}
 		else {
-			bin=(X:<=cutoff):*(ceil((X:-cutoff-2^-23)/bw)*bw:+cutoff:-bw/2) :+ ((X:>cutoff):*(floor(shift:*(X:-zH+2^-23):/bw):*bw:+zH*shift*:+bw/2))
+			bin=(X:<=cutoff):*(ceil((X:-cutoff:-2^-23):/bw)*bw:+cutoff:-bw/2) :+ ((X:>cutoff):*(floor(shift:*(X:-zH:+2^-23):/bw):*bw:+zH*shift:+bw/2))
 			y=mm_freq(bin)
 		}
 		bin=uniqrows(bin)
