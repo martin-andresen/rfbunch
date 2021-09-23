@@ -248,8 +248,8 @@ program rfbunch, eclass sortpreserve
 			tempvar predy f0 f1 f above fabove mean_b_cf
 			
 			
-			if `type'<2&`hole'==0 gen `bin'=ceil((`varlist'-`cutoff')/`bw')*`bw'+`cutoff'-`bw'/2 if `type'
-			else gen `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff')/`bw')*`bw'+`cutoff'-`bw'/2) + (`varlist'>`cutoff')*(floor((`varlist'-`minabove')/`bw')*`bw'+`minabove'+`bw'/2)			
+			if `type'<2&`hole'==0 gen `bin'=ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2 if `type'
+			else gen `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + (`varlist'>`cutoff')*(floor((`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'+`bw'/2)			
 			sort `bin'
 			egen `integerbin'=group(`bin')
 			
