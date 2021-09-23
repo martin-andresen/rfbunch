@@ -2,7 +2,6 @@
 Reduced form bunching estimation with multiple response variables in Stata. In development, bugs are likely. Report through GitHub or martin.eckhoff.andresen@gmail.com
 
 <h2>Alternative adjustment methods</h2>
-Chetty et al., 2011                                                                                   Andresen and Thorvaldsen, 2021
 ![](chetty.gif)
 ![](oss.gif)
 
