@@ -205,7 +205,7 @@ program rfbunch, eclass sortpreserve
 		loc B=`=`Bunchmass'-`freq0b'[1,1]'
 		mat `b'=`b',`B',`=`B'/`N'',`=`B'/`freq0b'[1,1]',`=`B'/`freq0tau'[1,1]' //Number of bunchers, bunchers share of sample, normalized bunching, excess mass
 		loc coleq `coleq' bunching bunching bunching bunching bunching bunching bunching
-		loc names `names' number_bunchers share_sample normalized_bunching excess_mass marginal_response average_response mean_nonbunchers
+		loc names `names' number_bunchers share_sample normalized_bunching excess_mass marginal_response average_response total_response mean_nonbunchers
 		
 		if `B'<0 {
 		Noi di "Negative estimates of B - no bunchign in the bunching region. Earnings response and counterfactual mean among bunchers cannot be calculated."
@@ -217,13 +217,15 @@ program rfbunch, eclass sortpreserve
 				mata: eresp=eresp(`B',`cutoff',st_matrix("`cf'"),`bw')
 				mata: st_numscalar("eresp",eresp)
 				mata: meanbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))/(`bw'*`B')-`cutoff'
+				mata: totalresponse=(1/`bw')*(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))-`cutoff'*`B'
 				mata: st_numscalar("meanbunch",meanbunch)
+				mata: st_numscalar("totealresponse",totalresponse)
 				}
 			else {
 				tempname predcut
 				mat `predcut'=`cf'*`cutvals'
 				scalar eresp=(`bw'*`B')/`predcut'[1,1]
-				scalar meanbunch=eresp/2
+				scalar meanbunch=eresp*`predcut'-`B'*`cutoff'/2
 				}
 			}
 		if "`constant'"!="constant" {
@@ -231,15 +233,12 @@ program rfbunch, eclass sortpreserve
 			mata: st_numscalar("meannonbunch",meannonbunch)
 			}
 		else scalar meannonbunch=(`cutoff'-`zL')/2
-		mat `b'=`b',eresp,meanbunch,meannonbunch //response of marginal buncher
+		mat `b'=`b',eresp,meanbunch,totalresponse,meannonbunch //response of marginal buncher
 		
 		restore
 	
 		//ESTIMATE REPONSE ALONG OTHER ENDOGENOUS VARS
 		if "`yvars'"!="" {
-			
-			
-			
 			preserve
 			drop if !`touse'
 			keep `varlist' `yvars'
