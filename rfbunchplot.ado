@@ -80,7 +80,7 @@ cap prog drop rfbunchplot
 			}
 				
 		foreach param in `parameters' {
-			if !inlist("`param'","shift","number_bunchers","share_sample","normalized_bunching","excess_mass","marginal_response","mean_bunchers") {
+			if !inlist("`param'","shift","number_bunchers","share_sample","normalized_bunching","excess_mass","marginal_response","average_response","total_response","mean_bunchers") {
 				noi di as error "List only parameters in  the bunching equation in parameters()."
 				exit 301
 			} 
@@ -98,6 +98,9 @@ cap prog drop rfbunchplot
 			else if "`param'"=="normalized_bunching" loc `param' `""normalized bunching: ``param''`star`param''""'
 			else if "`param'"=="excess_mass" loc `param' `""excess mass: ``param''`star`param''""'
 			else if "`param'"=="marginal_response" loc `param' `""marginal response: ``param''`star`param''""'
+			else if "`param'"=="average_response" loc `param' `""average response: ``param''`star`param''""'
+			else if "`param'"=="total_response" loc `param' `""total response: ``param''`star`param''""'
+			else if "`param'"=="mean_nonbunchers" loc `param' `""mean nonbunchers: ``param''`star`param''""'
 		}
 		
 		if "`adjust'"!="" {
@@ -189,7 +192,7 @@ cap prog drop rfbunchplot
 				`background' `adjplot' ///
 				`lines'  ///
 				`scatters' ///
-				, xline(`=e(upper_limit)', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) xline(`=e(lower_limit)', lpattern(dash) lcolor(black)) xline(`=`=_b[bunching:marginal_response]'+`=e(cutoff)'', lpattern(dash) lcolor(navy)) xscale(range(`min' `max')) text(`ymax' `xmax' `shift' `number_bunchers' `share_sample' `normalized_bunching' `excess_mass' `marginal_response' `production' `capital', placement(swest) justification(left) size(small)) graphregion(fcolor(white) lcolor(white)) plotregion(lcolor(black)) bgcolor(white) ytitle(`ytitle') legend(`labels') `graph_opts'
+				, xline(`=e(upper_limit)', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) xline(`=e(lower_limit)', lpattern(dash) lcolor(black)) xline(`=`=_b[bunching:marginal_response]'+`=e(cutoff)'', lpattern(dash) lcolor(navy)) xscale(range(`min' `max')) text(`ymax' `xmax' `shift' `number_bunchers' `share_sample' `normalized_bunching' `excess_mass' `marginal_response' `average_response' `total_response' `mean_nonbunchers' `production' `capital', placement(swest) justification(left) size(small)) graphregion(fcolor(white) lcolor(white)) plotregion(lcolor(black)) bgcolor(white) ytitle(`ytitle') legend(`labels') `graph_opts'
 
 
 		restore
