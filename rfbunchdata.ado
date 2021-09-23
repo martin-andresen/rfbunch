@@ -3,12 +3,21 @@
 * This program is part of the rfbunch package.
 cap prog drop rfbunchdata
 	program rfbunchdata, rclass
-	syntax [name], eta(numlist max=1 min=1 >=0 <=1)	t(numlist max=1 min=1  >=0 <=1) cut(numlist max=1 min=1) e(numlist max=1 min=1  >=0) mu(numlist max=1 min=1  >=0) r(numlist max=1 min=1 >=0) [obs(integer 5000) dist(string) seed(numlist min=1 max=1 integer)]
+	syntax, [eta(real 0) t(real 0.2) cut(real 0.1) e(real 0.2) mu(real 0.2) r(real 0.2) obs(integer 5000) dist(string) seed(numlist min=1 max=1 integer)]
 		
 	if "`seed'"!="" set seed `seed'
-	if "`namelist'"=="" loc namelist debtcost
 	if "`dist'"=="" loc dist rbeta(2,5)
 	
+	foreach param in eta t cut e mu r {
+		if ``param''<0 {
+			noi di as error "`param' must be >=0. You specified ``param''"
+			exit 301
+		}
+		if inlist("`param'","`t'","`eta'")&``param''>1 {
+			noi di as error "`param' must be <1. You specified ``param''"
+			exit 301
+			}
+		}
 	qui {
 		clear
 		set obs `obs'
@@ -57,15 +66,26 @@ cap prog drop rfbunchdata
 		
 		if `alphaL'>`alphaH' {
 			noi di in red "Warning: Parameters are such that the marginal buncher does not exist."
-			exit
+			exit 301
 		}
 		
-		gen `namelist' = `cut'-1e-6 if Ktau!=.
-		replace `namelist'=(`mu'/(`mu'+1))*(1-`t')^(`e'-`mu')*`Q0'^(-(`e'+1))*`r'^(`mu'+1)*alpha if alpha<`alphaL'
-		replace `namelist'=(`mu'/(`mu'+1))*(1-(1-`eta')*`t')^(`e'+1)*`Q1'^(-(`e'+1))*`r'^(`mu'+1)*alpha if alpha>`alphaH'
+		gen debtcost = `cut'-2^-23 if Ktau!=.
+		replace debtcost=(`mu'/(`mu'+1))*(1-`t')^(`e'-`mu')*`Q0'^(-(`e'+1))*`r'^(`mu'+1)*alpha if alpha<`alphaL'
+		replace debtcost=(`mu'/(`mu'+1))*(1-(1-`eta')*`t')^(`e'+1)*`Q1'^(-(`e'+1))*`r'^(`mu'+1)*alpha if alpha>`alphaH'
 		
-		//drop Ktau Pi1 alpha
+		gen debtratio = `r'^`mu'*(1-`t')^(-`mu') if alpha<`alphaL'
+		replace debtratio = (`cut'*(`mu+1')/`mu')^(`mu'/(`mu'+1))*Ktau^(-`mu'/(`mu'+1)) if Ktau!=.
+		replace debtratio = `r'^`mu' if alpha>`alphaH'
 		
+		gen K=Ktau if Ktau!=.
+		replace K=`Q0'^(-(`e'+1))*(1-`t')^(`e'+1)*alpha if alpha<`alphaL'
+		replace K=`Q1'^(-(`e'+1))*(1-(1-`eta')*`t')^(`e'+1)*alpha if alpha>`alphaH'
+		
+		gen debt=debtratio*K
+		gen equity=(1-debtratio)*K
+		
+		drop Ktau Pi1 alpha
+		//noi di `=(`mu'/(`mu+1'))*(1-`t')^(`e'-`mu')*`Q0'^(-(`e'+1))*`r'^(`mu'+1)*`alphaH'-`cut''
 		foreach param in alphaH alphaL eta t cut e mu {
 			return scalar `param'=``param''
 			}

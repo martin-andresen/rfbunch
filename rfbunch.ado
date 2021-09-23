@@ -204,11 +204,11 @@ program rfbunch, eclass sortpreserve
 		mata: st_matrix("`freq0tau'",(polyeval(st_matrix("`cf'"),`cutoff')))
 		loc B=`=`Bunchmass'-`freq0b'[1,1]'
 		mat `b'=`b',`B',`=`B'/`N'',`=`B'/`freq0b'[1,1]',`=`B'/`freq0tau'[1,1]' //Number of bunchers, bunchers share of sample, normalized bunching, excess mass
-		loc coleq `coleq' bunching bunching bunching bunching bunching bunching bunching
+		loc coleq `coleq' bunching bunching bunching bunching bunching bunching bunching bunching
 		loc names `names' number_bunchers share_sample normalized_bunching excess_mass marginal_response average_response total_response mean_nonbunchers
 		
 		if `B'<0 {
-		Noi di "Negative estimates of B - no bunchign in the bunching region. Earnings response and counterfactual mean among bunchers cannot be calculated."
+		noi di as text "Negative estimates of B - no bunching in the bunching region. Earnings response and counterfactual mean among bunchers cannot be calculated."
 		scalar eresp=.
 		scalar mean=.
 		}
