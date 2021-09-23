@@ -189,7 +189,7 @@ cap prog drop rfbunchplot
 				`background' `adjplot' ///
 				`lines'  ///
 				`scatters' ///
-				, xline(`=e(upper_limit)', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) xline(`=e(lower_limit)', lpattern(dash) lcolor(black)) xline(`=`=_b[bunching:marginal_response]'+`=e(cutoff)'', lpattern(dash) lcolor(navy)) xscale(range(`min' `max')) text(`ymax' `xmax' `shift' `number_bunchers' `share_sample' `normalized_bunching' `excess_mass' `marginal_response' `production' `capital', placement(southwest) justification(left) size(small)) graphregion(fcolor(white) lcolor(white)) plotregion(lcolor(black)) bgcolor(white) ytitle(`ytitle') legend(`labels') `graph_opts'
+				, xline(`=e(upper_limit)', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) xline(`=e(lower_limit)', lpattern(dash) lcolor(black)) xline(`=`=_b[bunching:marginal_response]'+`=e(cutoff)'', lpattern(dash) lcolor(navy)) xscale(range(`min' `max')) text(`ymax' `xmax' `shift' `number_bunchers' `share_sample' `normalized_bunching' `excess_mass' `marginal_response' `production' `capital', placement(swest) justification(left) size(small)) graphregion(fcolor(white) lcolor(white)) plotregion(lcolor(black)) bgcolor(white) ytitle(`ytitle') legend(`labels') `graph_opts'
 
 
 		restore
