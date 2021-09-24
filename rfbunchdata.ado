@@ -69,7 +69,7 @@ cap prog drop rfbunchdata
 			exit 301
 		}
 		
-		gen debtcost = `cut'-2^-23 if Ktau!=.
+		gen debtcost = `cut'-2^-23-runiform(0,`=0.2*`cut'') if Ktau!=.
 		replace debtcost=(`mu'/(`mu'+1))*(1-`t')^(`e'-`mu')*`Q0'^(-(`e'+1))*`r'^(`mu'+1)*alpha if alpha<`alphaL'
 		replace debtcost=(`mu'/(`mu'+1))*(1-(1-`eta')*`t')^(`e'+1)*`Q1'^(-(`e'+1))*`r'^(`mu'+1)*alpha if alpha>`alphaH'
 		
@@ -81,8 +81,13 @@ cap prog drop rfbunchdata
 		replace K=`Q0'^(-(`e'+1))*(1-`t')^(`e'+1)*alpha if alpha<`alphaL'
 		replace K=`Q1'^(-(`e'+1))*(1-(1-`eta')*`t')^(`e'+1)*alpha if alpha>`alphaH'
 		
+
+		
+		replace debtratio=debtratio+rnormal(0,0.25)
+		replace K=K+rnormal(0,1)
 		gen debt=debtratio*K
 		gen equity=(1-debtratio)*K
+		
 		
 		drop Ktau Pi1 alpha
 		//noi di `=(`mu'/(`mu+1'))*(1-`t')^(`e'-`mu')*`Q0'^(-(`e'+1))*`r'^(`mu'+1)*`alphaH'-`cut''

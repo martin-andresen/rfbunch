@@ -40,16 +40,16 @@ cap prog drop rfbunchplot
 		
 		tempvar f0 f1 CI_l0 CI_r0 CI_l1 CI_r1 error bin f
 		mat `f'=e(table)
-		svmat `f', names(eqcol)
-		rename _`=e(binname)' `=e(binname)'
-		rename _frequency frequency
+		svmat `f', names(col)
+		//rename _`=e(binname)' `=e(binname)'
+		//rename _frequency frequency
 		
 		set obs `=_N+1'
 		replace `e(binname)'=`e(cutoff)' in `=_N'
 		set obs `=_N+1'
 		replace `e(binname)'=`=`=_b[bunching:marginal_response]'+`=e(cutoff)'' in `=_N'
 		sort `e(binname)'
-				
+		
 		if "`namelist'"!="`=e(binname)'" {
 			gen above=0
 			predict double `f0', xb eq(`namelist')
@@ -79,12 +79,17 @@ cap prog drop rfbunchplot
 			else loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `=e(binname)'<=`=`=_b[bunching:marginal_response]'+`=e(cutoff)'', color(gs8%50)) (rarea `CI_l1' `CI_r1' `=e(binname)' if `=e(binname)'>=`=e(cutoff)', color(gs8%50))		
 			}
 				
-		foreach param in `parameters' {
-			if !inlist("`param'","shift","number_bunchers","share_sample","normalized_bunching","excess_mass","marginal_response","average_response","total_response","mean_bunchers") {
-				noi di as error "List only parameters in  the bunching equation in parameters()."
+		foreach param in `parameters' {	
+			if "`namelist'"=="`=e(binname)'"&!inlist("`param'","shift","number_bunchers","share_sample","normalized_bunching","excess_mass","marginal_response","average_response","total_response","mean_nonbunchers") {
+				noi di as error "List only parameters in  the bunching equation in parameters() when plotting standard bunching plot."
 				exit 301
 			} 
-			loc eq bunching
+			else if "`namelist'"!="`=e(binname)'"&!inlist("`param'","mean_bunchers","bunchers_diff","excess_value","mean_nonbunchers","mean_bunchers_cf") {
+				noi di as error "List only parameters in  `namelist'_means equation in parameters() when plotting alternative endogenous variables."
+				exit 301
+				}
+			if "`namelist'"=="`=e(binname)'" loc eq bunching
+			else loc eq `namelist'
 			if "`star'"!="nostar" {
 				test [`eq']:`param'
 				if r(p)<0.01 loc star`param' ***
@@ -101,6 +106,10 @@ cap prog drop rfbunchplot
 			else if "`param'"=="average_response" loc `param' `""average response: ``param''`star`param''""'
 			else if "`param'"=="total_response" loc `param' `""total response: ``param''`star`param''""'
 			else if "`param'"=="mean_nonbunchers" loc `param' `""mean nonbunchers: ``param''`star`param''""'
+			else if "`param'"=="bunchers_diff" loc `param' `""bunchers difference: ``param''`star`param''""'
+			else if "`param'"=="mean_bunchers" loc `param' `""mean among bunchers: ``param''`star`param''""'
+			else if "`param'"=="excess value" loc `param' `""excess value: ``param''`star`param''""'
+			else if "`param'"=="mean_nonbunchers_cf" loc `param' `""mean nonbunchers, cf: ``param''`star`param''""'
 		}
 		
 		if "`adjust'"!="" {
@@ -150,8 +159,8 @@ cap prog drop rfbunchplot
 			}
 			else {
 				loc lines (line `f0' `e(binname)' if `e(binname)'<=`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`=_b[bunching:marginal_response]'+`=e(cutoff)''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`e(cutoff)', color(maroon))
-				loc background (scatter _`namelist' `e(binname)' `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter _`namelist' `e(binname)' `weight' if inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(maroon))
-		
+				loc background (scatter `namelist' `e(binname)' `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' `e(binname)' `weight' if inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(maroon))
+				
 				gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
 				replace x=`=e(cutoff)'+_b[bunching:average_response] in 2
 				replace x=_b[bunching:mean_nonbunchers] in 3
@@ -192,7 +201,7 @@ cap prog drop rfbunchplot
 				`background' `adjplot' ///
 				`lines'  ///
 				`scatters' ///
-				, xline(`=e(upper_limit)', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) xline(`=e(lower_limit)', lpattern(dash) lcolor(black)) xline(`=`=_b[bunching:marginal_response]'+`=e(cutoff)'', lpattern(dash) lcolor(navy)) xscale(range(`min' `max')) text(`ymax' `xmax' `shift' `number_bunchers' `share_sample' `normalized_bunching' `excess_mass' `marginal_response' `average_response' `total_response' `mean_nonbunchers' `production' `capital', placement(swest) justification(left) size(small)) graphregion(fcolor(white) lcolor(white)) plotregion(lcolor(black)) bgcolor(white) ytitle(`ytitle') legend(`labels') `graph_opts'
+				, xline(`=e(upper_limit)', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) xline(`=e(lower_limit)', lpattern(dash) lcolor(black)) xline(`=`=_b[bunching:marginal_response]'+`=e(cutoff)'', lpattern(dash) lcolor(navy)) xscale(range(`min' `max')) text(`ymax' `xmax' `shift' `number_bunchers' `share_sample' `normalized_bunching' `excess_mass' `marginal_response' `average_response' `total_response' `mean_nonbunchers' `production' `capital' `excess_value' `mean_bunchers' `mean_nonbunchers_cf' `bunchers_diff', placement(swest) justification(left) size(small)) graphregion(fcolor(white) lcolor(white)) plotregion(lcolor(black)) bgcolor(white) ytitle(`ytitle') legend(`labels') `graph_opts' xtitle("`=e(binname)'")
 
 
 		restore
