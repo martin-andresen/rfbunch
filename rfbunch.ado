@@ -204,21 +204,27 @@ program rfbunch, eclass sortpreserve
 		mata: st_matrix("`freq0tau'",(polyeval(st_matrix("`cf'"),`cutoff')))
 		loc B=`=`Bunchmass'-`freq0b'[1,1]'
 		mat `b'=`b',`B',`=`B'/`N'',`=`B'/`freq0b'[1,1]',`=`B'/`freq0tau'[1,1]' //Number of bunchers, bunchers share of sample, normalized bunching, excess mass
-		loc coleq `coleq' bunching bunching bunching bunching bunching bunching bunching bunching
-		loc names `names' number_bunchers share_sample normalized_bunching excess_mass marginal_response average_response total_response mean_nonbunchers
+		loc coleq `coleq' bunching bunching bunching bunching bunching 
+		loc names `names' number_bunchers share_sample normalized_bunching excess_mass mean_nonbunchers
+		
+		if "`constant'"!="constant" {
+			mata: meannonbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((0,st_matrix("`cf'")),1),`zL'))/(polyeval(polyinteg((st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((st_matrix("`cf'")),1),`zL'))
+			mata: st_numscalar("meannonbunch",meannonbunch)
+			}
+		else scalar meannonbunch=(`cutoff'-`zL')/2
 		
 		if `B'<0 {
-		noi di as text "Negative estimates of B - no bunching in the bunching region. Earnings response and counterfactual mean among bunchers cannot be calculated."
-		scalar eresp=.
-		scalar mean=.
+		noi di as text "Negative estimates of B - no bunching in the bunching region. Marginal response, total response and counterfactual mean among bunchers cannot be calculated."
+		mat `b'=`b',meannonbunch
 		}
 		else {
+			
 			if "`constant'"!="constant" {
 				mata: eresp=eresp(`B',`cutoff',st_matrix("`cf'"),`bw')
 				mata: st_numscalar("eresp",eresp)
 				mata: meanbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))/(`bw'*`B')-`cutoff'
-				mata: totalresponse=(1/`bw')*(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))-`cutoff'*`B'
 				mata: st_numscalar("meanbunch",meanbunch)
+				mata: totalresponse=(1/`bw')*(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))-`cutoff'*`B'
 				mata: st_numscalar("totalresponse",totalresponse)
 				}
 			else {
@@ -226,14 +232,15 @@ program rfbunch, eclass sortpreserve
 				mat `predcut'=`cf'*`cutvals'
 				scalar eresp=(`bw'*`B')/`predcut'[1,1]
 				scalar meanbunch=eresp*`predcut'-`B'*`cutoff'/2
+				scalar totalresponse=eresp*`predcut'
 				}
+			
+			loc coleq `coleq' bunching bunching buncing
+			loc names `names' marginal_response total_response meanbunch
+			mat `b'=`b',meannonbunch,eresp,totalresponse,meanbunch
 			}
-		if "`constant'"!="constant" {
-			mata: meannonbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((0,st_matrix("`cf'")),1),`zL'))/(polyeval(polyinteg((st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((st_matrix("`cf'")),1),`zL'))
-			mata: st_numscalar("meannonbunch",meannonbunch)
-			}
-		else scalar meannonbunch=(`cutoff'-`zL')/2
-		mat `b'=`b',eresp,meanbunch,totalresponse,meannonbunch //response of marginal buncher
+
+		
 		
 		restore
 	
