@@ -38,6 +38,10 @@ cap prog drop rfbunchplot
 		
 		clear
 		
+		cap confirm scalar `=_b[bunching:marginal_response]'
+		if _rc==0 loc marginalresponse=`=_b[bunching:marginal_response]'
+		else loc marginalresponse=0
+		
 		tempvar f0 f1 CI_l0 CI_r0 CI_l1 CI_r1 error bin f
 		mat `f'=e(table)
 		svmat `f', names(col)
@@ -47,7 +51,7 @@ cap prog drop rfbunchplot
 		set obs `=_N+1'
 		replace `e(binname)'=`e(cutoff)' in `=_N'
 		set obs `=_N+1'
-		replace `e(binname)'=`=`=_b[bunching:marginal_response]'+`=e(cutoff)'' in `=_N'
+		replace `e(binname)'=`=`marginalresponse'+`=e(cutoff)'' in `=_N'
 		sort `e(binname)'
 		
 		if "`namelist'"!="`=e(binname)'" {
@@ -76,7 +80,7 @@ cap prog drop rfbunchplot
 				gen double `CI_r1'=`f1'+invnormal(0.975)*`error'
 				}
 			if "`=e(binname)'"=="`namelist'" loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)', color(gs8%50))
-			else loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `=e(binname)'<=`=`=_b[bunching:marginal_response]'+`=e(cutoff)'', color(gs8%50)) (rarea `CI_l1' `CI_r1' `=e(binname)' if `=e(binname)'>=`=e(cutoff)', color(gs8%50))		
+			else loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `=e(binname)'<=`=`marginalresponse'+`=e(cutoff)'', color(gs8%50)) (rarea `CI_l1' `CI_r1' `=e(binname)' if `=e(binname)'>=`=e(cutoff)', color(gs8%50))		
 			}
 				
 		foreach param in `parameters' {	
@@ -158,7 +162,7 @@ cap prog drop rfbunchplot
 				
 			}
 			else {
-				loc lines (line `f0' `e(binname)' if `e(binname)'<=`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`=_b[bunching:marginal_response]'+`=e(cutoff)''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`e(cutoff)', color(maroon))
+				loc lines (line `f0' `e(binname)' if `e(binname)'<=`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`marginalresponse'+`=e(cutoff)''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`e(cutoff)', color(maroon))
 				loc background (scatter `namelist' `e(binname)' `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' `e(binname)' `weight' if inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(maroon))
 				
 				gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
@@ -196,12 +200,13 @@ cap prog drop rfbunchplot
 				else su y
 				loc ymax=r(max)
 			}
-
+			
+			if `marginalresponse'>0 loc xlinemarg xline(`=`marginalresponse'+`=e(cutoff)'', lpattern(dash) lcolor(navy))
 			twoway 	`ciplot' ///
 				`background' `adjplot' ///
 				`lines'  ///
 				`scatters' ///
-				, xline(`=e(upper_limit)', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) xline(`=e(lower_limit)', lpattern(dash) lcolor(black)) xline(`=`=_b[bunching:marginal_response]'+`=e(cutoff)'', lpattern(dash) lcolor(navy)) xscale(range(`min' `max')) text(`ymax' `xmax' `shift' `number_bunchers' `share_sample' `normalized_bunching' `excess_mass' `marginal_response' `average_response' `total_response' `mean_nonbunchers' `production' `capital' `excess_value' `mean_bunchers' `mean_nonbunchers_cf' `bunchers_diff', placement(swest) justification(left) size(small)) graphregion(fcolor(white) lcolor(white)) plotregion(lcolor(black)) bgcolor(white) ytitle(`ytitle') legend(`labels') `graph_opts' xtitle("`=e(binname)'")
+				, xline(`=e(upper_limit)', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) xline(`=e(lower_limit)', lpattern(dash) lcolor(black)) `xlinemarg' xscale(range(`min' `max')) text(`ymax' `xmax' `shift' `number_bunchers' `share_sample' `normalized_bunching' `excess_mass' `marginal_response' `average_response' `total_response' `mean_nonbunchers' `production' `capital' `excess_value' `mean_bunchers' `mean_nonbunchers_cf' `bunchers_diff', placement(swest) justification(left) size(small)) graphregion(fcolor(white) lcolor(white)) plotregion(lcolor(black)) bgcolor(white) ytitle(`ytitle') legend(`labels') `graph_opts' xtitle("`=e(binname)'")
 
 
 		restore
