@@ -292,11 +292,19 @@ program rfbunch, eclass sortpreserve
 				loc excess=r(sum)
 				drop `predy'
 				
+				if `B'<0 {
+					noi di as text "Mean counterfactual for bunchers and difference between bunchers means and this quantity cannot be calculated for alternative because B<0."
+					mat `b'=`b',`excess',mean_nonbunchers,`=`excess'/`B'+mean_nonbunchers'
+					loc names `names' excess_value mean_nonbunchers mean_bunchers
+					loc coleq `coleq' `var'_means `var'_means `var'_means
+					}
+				else {
 				mata: mean_counterfactual=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff'+`=eresp')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff'+`=eresp')-polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff'))
 				mata: st_numscalar("mean_b_cf",mean_counterfactual)
 				mat `b'=`b',`excess',mean_nonbunchers,`=`excess'/`B'+mean_nonbunchers',mean_b_cf,`=`excess'/`B'+mean_nonbunchers-mean_b_cf'
 				loc names `names' excess_value mean_nonbunchers mean_bunchers mean_bunchers_cf bunchers_diff
 				loc coleq `coleq' `var'_means `var'_means `var'_means `var'_means `var'_means
+				}
 				
 				reg `var' ibn.`integerbin', nocons
 				mat `means'=e(b)
