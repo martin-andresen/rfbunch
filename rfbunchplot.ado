@@ -38,7 +38,7 @@ cap prog drop rfbunchplot
 		
 		clear
 		
-		cap confirm scalar `=_b[bunching:marginal_response]'
+		cap confirm scalar _b[bunching:marginal_response]
 		if _rc==0 loc marginalresponse=`=_b[bunching:marginal_response]'
 		else loc marginalresponse=0
 		
@@ -168,11 +168,13 @@ cap prog drop rfbunchplot
 				loc background (scatter `namelist' `e(binname)' `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' `e(binname)' `weight' if inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(maroon))
 				
 				gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
-				cap confirm scalar `=_b[bunching:average_response]'
-				if _rc==0 replace x=`=e(cutoff)'+_b[bunching:average_response] in 2
-				replace x=_b[bunching:mean_nonbunchers] in 3
 				gen y=_b[`namelist'_means:mean_bunchers] in 1
-				replace y=_b[`namelist'_means:mean_bunchers_cf] in 2
+				cap confirm scalar _b[bunching:average_response]
+				if _rc==0 {
+					replace x=`=e(cutoff)'+_b[bunching:average_response] in 2
+					replace y=_b[`namelist'_means:mean_bunchers_cf] in 2
+					}
+				replace x=_b[bunching:mean_nonbunchers] in 3
 				replace y=_b[`namelist'_means:mean_nonbunchers] in 3
 				if "`ci'"!="noci" {
 					mat ci=e(ci_normal)
