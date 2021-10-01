@@ -38,7 +38,7 @@ cap prog drop rfbunchplot
 		
 		clear
 		
-		cap confirm scalar _b[bunching:marginal_response]
+		cap scalar b=_b[bunching:marginal_response]
 		if _rc==0 loc marginalresponse=`=_b[bunching:marginal_response]'
 		else loc marginalresponse=0
 		
@@ -169,7 +169,7 @@ cap prog drop rfbunchplot
 				
 				gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
 				gen y=_b[`namelist'_means:mean_bunchers] in 1
-				cap confirm scalar _b[bunching:average_response]
+				cap scalar b=_b[bunching:average_response]
 				if _rc==0 {
 					replace x=`=e(cutoff)'+_b[bunching:average_response] in 2
 					replace y=_b[`namelist'_means:mean_bunchers_cf] in 2
