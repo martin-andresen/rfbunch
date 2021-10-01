@@ -50,8 +50,10 @@ cap prog drop rfbunchplot
 		
 		set obs `=_N+1'
 		replace `e(binname)'=`e(cutoff)' in `=_N'
-		set obs `=_N+1'
-		replace `e(binname)'=`=`marginalresponse'+`=e(cutoff)'' in `=_N'
+		if `marginalresponse'>0 {
+			set obs `=_N+1'
+			replace `e(binname)'=`=`marginalresponse'+`=e(cutoff)'' in `=_N'
+			}
 		sort `e(binname)'
 		
 		if "`namelist'"!="`=e(binname)'" {
@@ -166,7 +168,8 @@ cap prog drop rfbunchplot
 				loc background (scatter `namelist' `e(binname)' `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' `e(binname)' `weight' if inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(maroon))
 				
 				gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
-				replace x=`=e(cutoff)'+_b[bunching:average_response] in 2
+				cap confirm scalar `=_b[bunching:average_response]'
+				if _rc==0 replace x=`=e(cutoff)'+_b[bunching:average_response] in 2
 				replace x=_b[bunching:mean_nonbunchers] in 3
 				gen y=_b[`namelist'_means:mean_bunchers] in 1
 				replace y=_b[`namelist'_means:mean_bunchers_cf] in 2
