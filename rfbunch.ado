@@ -247,7 +247,7 @@ program rfbunch, eclass sortpreserve
 				}
 			
 			loc coleq `coleq' bunching bunching bunching
-			loc names `names' marginal_response total_response meanbunch
+			loc names `names' marginal_response total_response average_response
 			mat `b'=`b',meannonbunch,eresp,totalresponse,meanbunch
 			}
 
