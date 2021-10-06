@@ -29,7 +29,7 @@ cap prog drop rfbunchplot
 			
 		}
 		
-		if strpos("`namelist'","`=e(characterize)'")>0 loc charvar=1
+		if strpos("`=e(characterize)'","`namelist'")>0 loc charvar=1
 		else loc charvar=0
 		
 		cap confirm matrix e(V)
