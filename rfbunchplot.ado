@@ -163,7 +163,7 @@ cap prog drop rfbunchplot
 				tempname pols
 				mat `pols'=e(polynomial)
 				
-				forvalues k=1/`=`pols'[`=rownumb(pols,"`namelist'")',1]' {
+				forvalues k=1/`=`pols'[`=rownumb(`pols',"`namelist'")',1]' {
 					if `k'==1 loc nam c.`e(binname)'
 					else loc nam `nam'#c.`e(binname)'
 					loc pol0 `pol0'+`=_b[`namelist':`nam']'*x^`k'
