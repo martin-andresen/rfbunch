@@ -1,4 +1,4 @@
-*! rfbunchplot version date 20210914
+*! rfbunchplot version date 20211006
 * Author: Martin Eckhoff Andresen
 * This program is part of the rfbunch package.
 cap prog drop rfbunchplot
@@ -29,6 +29,9 @@ cap prog drop rfbunchplot
 			
 		}
 		
+		if strpos("`namelist'","`=e(characterize)'")>0 loc charvar=1
+		else loc charvar=0
+		
 		cap confirm matrix e(V)
 		if _rc!=0 {
 			noi di as text "No variance-covariance matrix found. Confidence intervals and significance stars not reported"
@@ -45,6 +48,17 @@ cap prog drop rfbunchplot
 		tempvar f0 f1 CI_l0 CI_r0 CI_l1 CI_r1 error bin f
 		mat `f'=e(table)
 		svmat `f', names(col)
+		
+		mat `f'=e(adj_freq)
+		svmat `f', names(col)
+		
+		su `e(binname)'
+		loc xmin=r(min)
+		loc xmax=r(max)
+		su `e(binname)' if `e(binname)'>`e(cutoff)'+1e-23
+		loc minabove=r(min)
+		
+
 		//rename _`=e(binname)' `=e(binname)'
 		//rename _frequency frequency
 		
@@ -55,19 +69,6 @@ cap prog drop rfbunchplot
 			replace `e(binname)'=`=`marginalresponse'+`=e(cutoff)'' in `=_N'
 			}
 		sort `e(binname)'
-		
-		if "`namelist'"!="`=e(binname)'" {
-			gen above=0
-			predict double `f0', xb eq(`namelist')
-			replace above=1
-			predict double `f1', xb eq(`namelist')
-			loc eq `namelist'
-		}
-		else {
-			loc eq counterfactual_frequency
-			predict double `f0', xb eq(`eq')
-		
-		}
 		
 		if "`ci'"!="noci" {
 			cap replace above=0
@@ -127,10 +128,6 @@ cap prog drop rfbunchplot
 					noi di as error "No adjustment was made to estimates in e(). Do not specify adjust unless estimates used adjustment".
 				exit 
 			}
-			mat `f'=e(adj_freq)
-			svmat `f'
-			rename `f'1 adj_bin
-			rename `f'2 adj_freq
 			
 			loc adjplot (bar adj_freq adj_bin if adj_bin>`=e(upper_limit)', barwidth(`=e(bandwidth)') color(maroon%50))
 			}
@@ -140,15 +137,14 @@ cap prog drop rfbunchplot
 				drop if !inrange(`=e(binname)',`min',`max')
 			}
 			
-			su `e(binname)'
-			loc xmin=r(min)
-			loc xmax=r(max)
-			if "`adjust'"!="" {
+			if "`adjust'"!=""|`charvar'==1 {
 				su adj_bin
 				loc xmax=r(max)
 			}
-				
+
+			
 			if "`namelist'"=="`e(binname)'" {
+
 				loc lines (line `f0' `e(binname)', color(maroon))
 				loc background (bar frequency `e(binname)', color(navy%50) barwidth(`=e(bandwidth)')) 
 				loc ytitle frequency
@@ -164,8 +160,28 @@ cap prog drop rfbunchplot
 				
 			}
 			else {
-				loc lines (line `f0' `e(binname)' if `e(binname)'<=`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`marginalresponse'+`=e(cutoff)''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`e(cutoff)', color(maroon))
-				loc background (scatter `namelist' `e(binname)' `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' `e(binname)' `weight' if inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(maroon))
+				tempname pols
+				mat `pols'=e(polynomial)
+				
+				forvalues k=1/`=`pols'[`=rownumb(pols,"`namelist'")',1]' {
+					if `k'==1 loc nam c.`e(binname)'
+					else loc nam `nam'#c.`e(binname)'
+					loc pol0 `pol0'+`=_b[`namelist':`nam']'*x^`k'
+					if `charvar'==0 {
+						loc pol1 `pol1'+(`=_b[`namelist':`nam']'+`=_b[`namelist':c.above#`nam']')*x^`k'
+						}
+				}
+				
+				loc pol0 `=_b[`namelist':_cons]' `pol0'
+				if `charvar'==0 {
+					loc pol1 `=_b[`namelist':_cons]'+`=_b[`namelist':above]' `pol1'
+					loc topline (function y=`pol1', range(`e(cutoff)' `minabove') color(navy) lpattern(dash)) (function y=`pol1', range(`minabove' `xmax') color(navy))
+				}
+				else loc topline (function y=`pol0', range(`e(cutoff)' `=`marginalresponse'+`=e(cutoff)'') color(maroon) lpattern(dash)) (function y=`pol0', range(`=`marginalresponse'+`=e(cutoff)'' `xmax') color(maroon))
+				
+				loc lines (function y=`pol0', range(`xmin' `e(lower_limit)') color(maroon)) (function y=`pol0', range(`e(lower_limit)' `=e(cutoff)') color(maroon) lpattern(dash)) `topline'
+				if `charvar'==0 loc background (scatter `namelist' `e(binname)' `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' `e(binname)' `weight' if inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(maroon))
+				else  loc background (scatter `namelist' adj_bin `weight' if !inrange(adj_bin,`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' adj_bin `weight' if inrange(adj_bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
 				
 				gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
 				gen y=_b[`namelist'_means:mean_bunchers] in 1

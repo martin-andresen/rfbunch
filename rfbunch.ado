@@ -1,4 +1,4 @@
-*! rfbunch version date 20210923
+*! rfbunch version date 20211006
 * Author: Martin Eckhoff Andresen
 * This program is part of the rfbunch package.
 cap prog drop rfbunch
@@ -12,34 +12,44 @@ program rfbunch, eclass sortpreserve
 	POLynomial(numlist min=0 integer >=0) ///
 	ADJust(string) ///
 	nofill ///
+	CHARacterize(varlist) ///
 	constant ]
 	
 	quietly {
 
 		//check options
 		gettoken varlist yvars: varlist
-		if "`polynomial'"=="" {
-			loc polynomial=7
-			loc i=0
+		tempname polynomials
+		loc numyvars: word count `yvars'
+		loc numxvars: word count `characterize'
+		loc numpoly: word count `polynomial'
+		if `numpoly'>`numyvars'+`numxvars'+1 {
+			noi di as error "Specify no more numbers than the number of variables in varlist and char() together in polynomial()."
+			exit 301
+		}
+		if `numpoly'==0 {
+			mat `polynomials'=7
 			foreach yvar in `yvars' {
-				loc ++i
-				loc pol`i'=1
+				mat `polynomials'=`polynomials' \ 1
+				}
+			foreach yvar in `characterize' {
+				mat `polynomials'=`polynomials' \ 7
 				}
 			}	
 		else {
-			gettoken polynomial poly: polynomial
-			loc i=0
-			loc last=`polynomial'
-			foreach yvar in `yvars' {
-				loc ++i
-				if "`poly'"!="" {
-					gettoken pol`i' poly: poly
-					loc last=`pol`i''
+			foreach pol in `polynomial' {
+				mat `polynomials'=nullmat(`polynomials') \ `pol'	
+				}
+				if `numpoly'<`numyvars'+`numxvars'+1 {
+					forvalues k=1/`=`=rowsof(`polynomials')'-`numyvars'-`numxvars'-1' {
+						if `k'>`numyvars'+1 mat `polynomials'=`polynomials' \ 7
+						else mat `polynomials'=`polynomials' \ 1
 					}
-				else loc pol`i'=`last'
 				}
 			}
-
+		
+		mat rownames `polynomials'=`varlist' `yvars' `characterize'
+		mat colnames `polynomials'=polynomial
 		cap which moremata.hlp 
 		if _rc!=0 {
 			noi di in red "moremata needed. Install using "ssc install moremata"".
@@ -163,7 +173,7 @@ program rfbunch, eclass sortpreserve
 			loc minabove=r(min)
 		}
 		
-		forvalues i=1/`polynomial' {
+		forvalues i=1/`=`polynomials'[1,1]' {
 			if "`rhsvars'"=="" loc rhsvars  c.`varlist'
 			else loc rhsvars `rhsvars'##c.`varlist'
 			mat `cutvals'=nullmat(`cutvals') \ `cutoff'^`i'
@@ -177,20 +187,21 @@ program rfbunch, eclass sortpreserve
 		
 		//Get counterfactual and adjust, if using
 		if inlist("`adjust'","x","y") {
-			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`polynomial',`BM',`bw',`type',10,1,`fill',`cutoff',`hole')
+			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`=`polynomials'[1,1]',`BM',`bw',`type',10,1,`fill',`cutoff',`hole')
 			mata: st_matrix("`b'",shift)
-			mata: st_matrix("`adj_freq'",fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',`=`b'[1,`=colsof(`b')']',`type',`fill',`cutoff',`hole'))
+			mata: st_matrix("`adj_freq'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`cutoff',`=`b'[1,`=colsof(`b')']',`type',0,`cutoff',`hole'))
 			mat `cf'=`b'[1,1..`=colsof(`b')-1']
 			mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
 			scalar shift=`b'[1,`=colsof(`b')']
 			fvexpand `rhsvars'
-			loc names `r(varlist)' _cons  shift
+			loc names `r(varlist)' _cons shift
 			loc coleq `coleq' bunching
+			loc adjnames adj_bin adj_freq
 			}
 		else {
 			mata: data=fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',1,0,`fill',`cutoff',`hole'')
 			mata: xbin=J(rows(data[.,1]),1,1)
-			mata: for (p=1; p<=`polynomial'; p++) xbin=xbin,data[.,1]:^p
+			mata: for (p=1; p<=`=`polynomials'[1,1]'; p++) xbin=xbin,data[.,1]:^p
 			mata: b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
 			mata: st_matrix("`b'",b)
 			mat `cf'=`b'
@@ -235,7 +246,7 @@ program rfbunch, eclass sortpreserve
 				scalar totalresponse=eresp*`predcut'
 				}
 			
-			loc coleq `coleq' bunching bunching buncing
+			loc coleq `coleq' bunching bunching bunching
 			loc names `names' marginal_response total_response meanbunch
 			mat `b'=`b',meannonbunch,eresp,totalresponse,meanbunch
 			}
@@ -244,41 +255,47 @@ program rfbunch, eclass sortpreserve
 		
 		restore
 	
-		//ESTIMATE REPONSE ALONG OTHER ENDOGENOUS VARS
-		if "`yvars'"!="" {
+		//ESTIMATE REPONSE ALONG OTHER ENDOGENOUS VARS or CHARACTERIZING VARS
+		if "`yvars'"!=""|"`characterize'"!="" {
 			preserve
 			drop if !`touse'
-			keep `varlist' `yvars'
+			keep `varlist' `yvars' `characterize'
+			gen `useobs'= !inrange(`varlist',`zL',`zH')
 			
-			tempname means integerbin
+			tempname means integerbin adjustbin
 			tempvar predy f0 f1 f above fabove mean_b_cf
-			
 			
 			if `type'<2&`hole'==0 gen `bin'=ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2 if `type'
 			else gen `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + (`varlist'>`cutoff')*(floor((`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'+`bw'/2)			
 			sort `bin'
 			egen `integerbin'=group(`bin')
 			
+			replace `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + ((`varlist'>`cutoff')*(floor(shift*(`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'*shift+`bw'/2))
+			egen `adjustbin'=group(`bin')
+			
 			gen `above'=`varlist'>`cutoff'
 			loc i=0
-			foreach var in `yvars' {
-				tempname cutvalsy
+			foreach var in `yvars' `characterize' {
+				
+				if `i'==`numyvars'&"`adjust'"=="x" replace `varlist'=`varlist'*shift if `varlist'>`cutoff'
 				loc ++i
-				if `pol`i''>0 {
-					forvalues k=1/`pol`i'' {
+				if `=`polynomials'[`=`i'+1',1]'>0 {
+					forvalues k=1/`=`polynomials'[`=`i'+1',1]' {
 						if `k'==1 loc rhsvars c.`varlist'
 						else loc rhsvars `rhsvars'##c.`varlist'
-						mat `cutvalsy'=nullmat(`cutvalsy') \ `cutoff'^`k'
 					}
-					mat `cutvalsy'=1 \ `cutvalsy'
 				}
-				else mat `cutvalsy'=1
 				
-				if `pol`i''>0 reg `var' `rhsvars' 1.`above' 1.`above'#(`rhsvars')  if !inrange(`varlist',`zL',`zH')
-				else reg `var' 1.`above' if !inrange(`varlist',`zL',`zH')
+				if `i'>`numyvars' {
+					reg `var' `rhsvars'  if `useobs'
+				}
+				else {
+					if `=`polynomials'[`=`i'+1',1]'>0 reg `var' `rhsvars' 1.`above' 1.`above'#(`rhsvars')  if `useobs'
+					else reg `var' 1.`above' if `useobs'
+				}
 				mat `b'=`b',e(b)
 				mat `f'=e(b)
-				if `pol`i''>0 mat `f'=_b[_cons],`f'[1,1..`pol`i'']
+				if `=`polynomials'[`=`i'+1',1]'>0 mat `f'=_b[_cons],`f'[1,1..`=`polynomials'[`=`i'+1',1]']
 				else mat `f'=_b[_cons]
 				mata:mean_nonbunchers=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`zL'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff')-polyeval(polyinteg(st_matrix("`cf'"),1),`zL'))
 				mata: st_numscalar("mean_nonbunchers",mean_nonbunchers)
@@ -306,11 +323,23 @@ program rfbunch, eclass sortpreserve
 				loc coleq `coleq' `var'_means `var'_means `var'_means `var'_means `var'_means
 				}
 				
-				reg `var' ibn.`integerbin', nocons
-				mat `means'=e(b)
+				if "`adjust'"!="x"|`i'<=`numyvars' {
+					reg `var' ibn.`integerbin', nocons
+					mat `means'=e(b)
+					
+					mat `table'=`table',`means''
+					loc colfreq `colfreq' `var'
+				}
 				
-				mat `table'=`table',`means''
-				loc colfreq `colfreq' `var'
+				else {
+					reg `var' ibn.`adjustbin', nocons
+					mat `means'=e(b)
+					
+					mat `adj_freq'=`adj_freq',`means''
+					loc adjnames `adjnames' `var'
+				}
+				
+				
 				}
 			restore
 			}
@@ -352,7 +381,7 @@ program rfbunch, eclass sortpreserve
 		mat coleq `b'=`coleq'
 
 		eret post `b', esample(`touse') obs(`N')
-		ereturn scalar polynomial=`polynomial'
+		ereturn matrix polynomial=`polynomials'
 		ereturn scalar bandwidth=`bw'
 		ereturn scalar cutoff=`cutoff'
 		ereturn scalar lower_limit=`zL'
@@ -362,9 +391,11 @@ program rfbunch, eclass sortpreserve
 		
 		ereturn local binname `varlist'
 		ereturn local indepvars `yvars'
+		if "`characterize'"!="" ereturn local characterize `characterize'
 		mat colnames `table'=`colfreq'
 		ereturn matrix table=`table'
 		if "`adjust'"!="none"&"`adjust'"!="" {
+			mat colnames `adj_freq'=`adjnames'
 			ereturn matrix adj_freq=`adj_freq'
 			ereturn local adjustment="`adjust'"
 			}
