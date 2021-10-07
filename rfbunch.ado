@@ -23,6 +23,7 @@ program rfbunch, eclass sortpreserve
 		loc numyvars: word count `yvars'
 		loc numxvars: word count `characterize'
 		loc numpoly: word count `polynomial'
+		
 		if `numpoly'>`numyvars'+`numxvars'+1 {
 			noi di as error "Specify no more numbers than the number of variables in varlist and char() together in polynomial()."
 			exit 301

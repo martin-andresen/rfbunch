@@ -1,4 +1,4 @@
-*! rfbunchplot version date 20211006
+*! rfbunchplot version date 20211007
 * Author: Martin Eckhoff Andresen
 * This program is part of the rfbunch package.
 cap prog drop rfbunchplot
@@ -34,7 +34,7 @@ cap prog drop rfbunchplot
 		
 		cap confirm matrix e(V)
 		if _rc!=0 {
-			noi di as text "No variance-covariance matrix found. Confidence intervals and significance stars not reported"
+			noi di as text "No variance-covariance matrix found. Confidence intervals and significance stars not reported."
 			loc ci noci
 			loc star nostar
 		}
@@ -48,10 +48,7 @@ cap prog drop rfbunchplot
 		tempvar f0 f1 CI_l0 CI_r0 CI_l1 CI_r1 error bin f
 		mat `f'=e(table)
 		svmat `f', names(col)
-		
-		mat `f'=e(adj_freq)
-		svmat `f', names(col)
-		
+	
 		su `e(binname)'
 		loc xmin=r(min)
 		loc xmax=r(max)
@@ -59,33 +56,50 @@ cap prog drop rfbunchplot
 		loc minabove=r(min)
 		
 
-		//rename _`=e(binname)' `=e(binname)'
-		//rename _frequency frequency
-		
-		set obs `=_N+1'
-		replace `e(binname)'=`e(cutoff)' in `=_N'
-		if `marginalresponse'>0 {
-			set obs `=_N+1'
-			replace `e(binname)'=`=`marginalresponse'+`=e(cutoff)'' in `=_N'
+		cap confirm matrix e(adj_freq)
+		if _rc==0 {
+			mat `f'=e(adj_freq)
+			svmat `f', names(col)
+			su adj_bin
+			if r(max)>`xmax' loc xmax=r(max)
 			}
+		
 		sort `e(binname)'
 		
-		if "`ci'"!="noci" {
-			cap replace above=0
+		if "`namelist'"=="`e(binname)'" loc eq counterfactual_frequency
+		else loc eq `namelist'
+		
+		rename `e(binname)' bin
+
+		cap set obs 200
+		gen `e(binname)'=`xmin'+_n*(`xmax'-`xmin')/200 in 1/200
+
+		gen above=0
+		predict double `f0', eq(`eq')
+		if `charvar'==0&"`namelist'"!="`e(binname)'" {
+			replace above=1
+			predict double `f1', eq(`eq')
+		}
+		
+		if "`ci'"!="noci"  {
+			replace above=0			
 			predict double `error', stdp eq(`eq')
 			gen double `CI_l0'=`f0'-invnormal(0.975)*`error'
 			gen double `CI_r0'=`f0'+invnormal(0.975)*`error'
-			cap replace above=1
-			if  "`namelist'"!="`=e(binname)'" {
+			if `charvar'==0&"`namelist'"!="`e(binname)'" {
 				drop `error'
 				predict double `error', stdp eq(`eq')
 				gen double `CI_l1'=`f1'-invnormal(0.975)*`error'
 				gen double `CI_r1'=`f1'+invnormal(0.975)*`error'
-				}
-			if "`=e(binname)'"=="`namelist'" loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)', color(gs8%50))
-			else loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `=e(binname)'<=`=`marginalresponse'+`=e(cutoff)'', color(gs8%50)) (rarea `CI_l1' `CI_r1' `=e(binname)' if `=e(binname)'>=`=e(cutoff)', color(gs8%50))		
+				drop `error'
 			}
-				
+		if "`=e(binname)'"=="`namelist'"|`charvar'==1 loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)', color(gs8%50))
+		else loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `=e(binname)'<=`=`marginalresponse'+`=e(cutoff)'', color(gs8%50)) (rarea `CI_l1' `CI_r1' `=e(binname)' if `=e(binname)'>=`=e(cutoff)', color(gs8%50))	
+		}
+		
+		replace above=`e(binname)'>`e(cutoff)'
+		
+		//print parameters					
 		foreach param in `parameters' {	
 			if "`namelist'"=="`=e(binname)'"&!inlist("`param'","shift","number_bunchers","share_sample","normalized_bunching","excess_mass","marginal_response","average_response","total_response","mean_nonbunchers") {
 				noi di as error "List only parameters in  the bunching equation in parameters() when plotting standard bunching plot."
@@ -119,70 +133,58 @@ cap prog drop rfbunchplot
 			else if "`param'"=="mean_nonbunchers_cf" loc `param' `""mean nonbunchers, cf: ``param''`star`param''""'
 		}
 		
+		//adjust option
 		if "`adjust'"!="" {
 			if "`namelist'"!="`e(binname)'" {
 				noi di as error "Option adjust only for use with basic bunch plots - do not specify alternative plotting variable."
 				exit
 			}
 			if "`e(adjustment)'"=="" {
-					noi di as error "No adjustment was made to estimates in e(). Do not specify adjust unless estimates used adjustment".
+				noi di as error "No adjustment was made to estimates in e(). Do not specify adjust unless estimates used adjustment".
 				exit 
 			}
 			
 			loc adjplot (bar adj_freq adj_bin if adj_bin>`=e(upper_limit)', barwidth(`=e(bandwidth)') color(maroon%50))
 			}
 			
-			if "`limit'"!="" {
-				gettoken min max: limit
-				drop if !inrange(`=e(binname)',`min',`max')
-			}
-			
-			if "`adjust'"!=""|`charvar'==1 {
-				su adj_bin
-				loc xmax=r(max)
+		//limit option
+		if "`limit'"!="" {
+				gettoken xmin xmax: limit
+				replace `e(binname)'=. if !inrange(`=e(binname)',`xmin',`xmax')
+				replace bin=. if !inrange(bin,`xmin',`xmax')
 			}
 
-			
-			if "`namelist'"=="`e(binname)'" {
+		//Regular plot
+		if "`namelist'"=="`e(binname)'" {
 
-				loc lines (line `f0' `e(binname)', color(maroon))
-				loc background (bar frequency `e(binname)', color(navy%50) barwidth(`=e(bandwidth)')) 
-				loc ytitle frequency
-				
-				if "`adjust'"=="" {
-					if "`ci'"=="noci" loc labels label(1 "observed") label(2 "estimated counterfactual") order(1 2)
-					else loc labels label(1 "95% CI") label(2 "observed") label(3 "estimated counterfactual") order(2 3 1) cols(3)
-				}
-				else {
-					if "`ci'"=="noci" loc labels label(1 "observed") label(2 "adjusted") label(3 "estimated counterfactual") order(1 2 3) cols(3)
-					else loc labels label(1 "95% CI") label(2 "observed") label(3 "adjusted") label(4 "estimated counterfactual") order(2 3 4 1) cols(2)
-				}
-				
+			loc lines (line `f0' `e(binname)', color(maroon))
+			loc background (bar frequency bin, color(navy%50) barwidth(`=e(bandwidth)')) 
+			loc ytitle frequency
+			
+			if "`adjust'"=="" {
+				if "`ci'"=="noci" loc labels label(1 "observed") label(2 "estimated counterfactual") order(1 2)
+				else loc labels label(1 "95% CI") label(2 "observed") label(3 "estimated counterfactual") order(2 3 1) cols(3)
 			}
 			else {
-				tempname pols
-				mat `pols'=e(polynomial)
-				
-				forvalues k=1/`=`pols'[`=rownumb(`pols',"`namelist'")',1]' {
-					if `k'==1 loc nam c.`e(binname)'
-					else loc nam `nam'#c.`e(binname)'
-					loc pol0 `pol0'+`=_b[`namelist':`nam']'*x^`k'
-					if `charvar'==0 {
-						loc pol1 `pol1'+(`=_b[`namelist':`nam']'+`=_b[`namelist':c.above#`nam']')*x^`k'
-						}
-				}
-				
-				loc pol0 `=_b[`namelist':_cons]' `pol0'
+				if "`ci'"=="noci" loc labels label(1 "observed") label(2 "adjusted") label(3 "estimated counterfactual") order(1 2 3) cols(3)
+				else loc labels label(1 "95% CI") label(2 "observed") label(3 "adjusted") label(4 "estimated counterfactual") order(2 3 4 1) cols(2)
+			}
+			
+		}
+		
+		//alternative outcome/ characterize plot
+			else  {
 				if `charvar'==0 {
-					loc pol1 `=_b[`namelist':_cons]'+`=_b[`namelist':above]' `pol1'
-					loc topline (function y=`pol1', range(`e(cutoff)' `minabove') color(navy) lpattern(dash)) (function y=`pol1', range(`minabove' `xmax') color(navy))
+					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`e(cutoff)'+`marginalresponse''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>`minabove', color(navy)) (line `f1' `e(binname)' if inrange(`e(binname)',`e(cutoff)',`minabove'), color(navy) lpattern(dash)) 
+					loc background (scatter `namelist' bin `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' bin `weight' if inrange(bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
 				}
-				else loc topline (function y=`pol0', range(`e(cutoff)' `=`marginalresponse'+`=e(cutoff)'') color(maroon) lpattern(dash)) (function y=`pol0', range(`=`marginalresponse'+`=e(cutoff)'' `xmax') color(maroon))
-				
-				loc lines (function y=`pol0', range(`xmin' `e(lower_limit)') color(maroon)) (function y=`pol0', range(`e(lower_limit)' `=e(cutoff)') color(maroon) lpattern(dash)) `topline'
-				if `charvar'==0 loc background (scatter `namelist' `e(binname)' `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' `e(binname)' `weight' if inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(maroon))
-				else  loc background (scatter `namelist' adj_bin `weight' if !inrange(adj_bin,`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' adj_bin `weight' if inrange(adj_bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
-				
+				else {
+					cap su adj_bin if adj_bin>`e(cutoff)'
+					cap loc minabove=r(min)
+					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if `e(binname)'>=`minabove', color(maroon))  (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`minabove'), color(maroon) lpattern(dash))
+					loc background (scatter `namelist' adj_bin `weight' if !inrange(adj_bin,`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' adj_bin `weight' if inrange(adj_bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
+				}
+							
 				gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
 				gen y=_b[`namelist'_means:mean_bunchers] in 1
 				cap scalar b=_b[bunching:average_response]
@@ -203,12 +205,15 @@ cap prog drop rfbunchplot
 				}
 				else loc scatters (scatter y x, color(dkgreen))	
 			
-			if "`ci'"!="noci" loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "polynomial fit") label(9 "estimated means") order(3 5 9 1) cols(2)
-			else loc labels label(1 "mean in bin") label(3 "polynomial fit") label(6 "estimated means") order(1 3 6) cols(3)
-			loc ytitle `namelist'
-			}
+			if "`ci'"!="noci"{
+				if `charvar'==1 loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "polynomial fit") label(8 "estimated means") order(3 5 8 1) cols(2)
+				else loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "polynomial fit") label(10 "estimated means") order(3 5 10 1) cols(2)
+			} 
 			else {
-
+				if `charvar'==1 loc labels label(1 "mean in bin") label(3 "polynomial fit") label(6 "estimated means") order(1 3 6) cols(3)
+				else loc labels label(1 "mean in bin") label(3 "polynomial fit") label(7 "estimated means") order(1 3 7) cols(3)
+			}
+			loc ytitle `namelist'
 			}
 			
 			if "`namelist'"=="`=e(binname)'" {
