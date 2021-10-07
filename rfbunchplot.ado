@@ -57,7 +57,7 @@ cap prog drop rfbunchplot
 		
 
 		cap confirm matrix e(adj_freq)
-		if _rc==0 {
+		if _rc==0&(("`namelist'"!="`e(binname)'"&`charvar'==1)|("`namelist'"=="`e(binname)'"&"`adjust'"!="")) {
 			mat `f'=e(adj_freq)
 			svmat `f', names(col)
 			su adj_bin
@@ -94,7 +94,7 @@ cap prog drop rfbunchplot
 				drop `error'
 			}
 		if "`=e(binname)'"=="`namelist'"|`charvar'==1 loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)', color(gs8%50))
-		else loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `=e(binname)'<=`=`marginalresponse'+`=e(cutoff)'', color(gs8%50)) (rarea `CI_l1' `CI_r1' `=e(binname)' if `=e(binname)'>=`=e(cutoff)', color(gs8%50))	
+		else loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `=e(binname)'<=`=`marginalresponse'+`=e(cutoff)'', color(gs8%50)) (rarea `CI_l1' `CI_r1' `=e(binname)' if inrange(`=e(binname)',`=e(cutoff)',`xmax'), color(gs8%50))	
 		}
 		
 		replace above=`e(binname)'>`e(cutoff)'
@@ -172,10 +172,10 @@ cap prog drop rfbunchplot
 			
 		}
 		
-		//alternative outcome/ characterize plot
+		//alternative outcome/characterize plot
 			else  {
 				if `charvar'==0 {
-					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`e(cutoff)'+`marginalresponse''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>`minabove', color(navy)) (line `f1' `e(binname)' if inrange(`e(binname)',`e(cutoff)',`minabove'), color(navy) lpattern(dash)) 
+					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`e(cutoff)'+`marginalresponse''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`minabove', color(navy)) (line `f1' `e(binname)' if inrange(`e(binname)',`e(cutoff)',`minabove'), color(navy) lpattern(dash)) 
 					loc background (scatter `namelist' bin `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' bin `weight' if inrange(bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
 				}
 				else {
