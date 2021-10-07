@@ -152,6 +152,7 @@ cap prog drop rfbunchplot
 				gettoken xmin xmax: limit
 				replace `e(binname)'=. if !inrange(`=e(binname)',`xmin',`xmax')
 				replace bin=. if !inrange(bin,`xmin',`xmax')
+				replace adj_bin=. if !inrange(adj_bin,`xmin',`xmax')
 			}
 
 		//Regular plot
