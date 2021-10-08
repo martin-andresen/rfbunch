@@ -42,7 +42,7 @@ program rfbunch, eclass sortpreserve
 				mat `polynomials'=nullmat(`polynomials') \ `pol'	
 				}
 				if `numpoly'<`numyvars'+`numxvars'+1 {
-					forvalues k=1/`=`=rowsof(`polynomials')'-`numyvars'-`numxvars'-1' {
+					forvalues k=1/`=`numyvars'+`numxvars'+1-`=rowsof(`polynomials')'' {
 						if `k'>`numyvars'+1 mat `polynomials'=`polynomials' \ 7
 						else mat `polynomials'=`polynomials' \ 1
 					}
