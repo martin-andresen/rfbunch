@@ -19,6 +19,7 @@ program rfbunch, eclass sortpreserve
 
 		//check options
 		gettoken varlist yvars: varlist
+		
 		tempname polynomials
 		loc numyvars: word count `yvars'
 		loc numxvars: word count `characterize'
@@ -154,6 +155,18 @@ program rfbunch, eclass sortpreserve
 		preserve
 		drop if !`touse'
 		keep `varlist'
+		
+		count if `varlist'<`cutoff'
+		if r(N)==0 {
+			noi di as error "No individuals in sample allocates below cutoff."
+			Exit
+			}
+		count if `varlist'>`cutoff'
+		if r(N)==0 {
+			noi di as error "No individuals in sample allocates above cutoff."
+			Exit
+			}
+		
 		loc N=_N
 		count if `varlist'>`zL'
 		loc BM=r(N)
