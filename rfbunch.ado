@@ -159,12 +159,12 @@ program rfbunch, eclass sortpreserve
 		count if `varlist'<`cutoff'
 		if r(N)==0 {
 			noi di as error "No individuals in sample allocates below cutoff."
-			Exit
+			exit 301
 			}
 		count if `varlist'>`cutoff'
 		if r(N)==0 {
 			noi di as error "No individuals in sample allocates above cutoff."
-			Exit
+			exit 301
 			}
 		
 		loc N=_N
