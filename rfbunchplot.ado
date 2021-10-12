@@ -144,7 +144,7 @@ cap prog drop rfbunchplot
 				exit 
 			}
 			
-			loc adjplot (bar adj_freq adj_bin if adj_bin>`=e(upper_limit)', barwidth(`=e(bandwidth)') color(maroon%50))
+			loc adjplot (bar adj_freq adj_bin if adj_bin>`=e(upper_limit)*_b[bunching:shift]', barwidth(`=e(bandwidth)') color(maroon%50))
 			}
 			
 		//limit option
