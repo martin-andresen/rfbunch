@@ -177,13 +177,13 @@ cap prog drop rfbunchplot
 			else  {
 				if `charvar'==0 {
 					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`e(cutoff)'+`marginalresponse''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`minabove', color(navy)) (line `f1' `e(binname)' if inrange(`e(binname)',`e(cutoff)',`minabove'), color(navy) lpattern(dash)) 
-					loc background (scatter `namelist' bin `weight' if !inrange(`e(binname)',`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' bin `weight' if inrange(bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
+					loc background (scatter `namelist' bin `weight' if !inrange(bin,`=e(lower_limit)',`e(upper_limit)'), color(black) msymbol(circle_hollow)) (scatter `namelist' bin `weight' if inrange(bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
 				}
 				else {
 					cap su adj_bin if adj_bin>`e(cutoff)'
 					cap loc minabove=r(min)
 					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if `e(binname)'>=`minabove', color(maroon))  (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`minabove'), color(maroon) lpattern(dash))
-					loc background (scatter `namelist' adj_bin `weight' if !inrange(adj_bin,`e(lower_limit)',`e(cutoff)'), color(black) msymbol(circle_hollow)) (scatter `namelist' adj_bin `weight' if inrange(adj_bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
+					loc background (scatter `namelist' adj_bin `weight' if !inrange(adj_bin,`e(lower_limit)',`e(upper_limit)'), color(black) msymbol(circle_hollow)) (scatter `namelist' adj_bin `weight' if inrange(adj_bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
 				}
 							
 				gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
