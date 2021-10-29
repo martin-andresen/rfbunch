@@ -93,8 +93,8 @@ cap prog drop rfbunchplot
 				gen double `CI_r1'=`f1'+invnormal(0.975)*`error'
 				drop `error'
 			}
-		if "`=e(binname)'"=="`namelist'"|`charvar'==1 loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)', color(gs8%50))
-		else loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `=e(binname)'<=`=`marginalresponse'+`=e(cutoff)'', color(gs8%50)) (rarea `CI_l1' `CI_r1' `=e(binname)' if inrange(`=e(binname)',`=e(cutoff)',`xmax'), color(gs8%50))	
+		if "`=e(binname)'"=="`namelist'"|`charvar'==1 loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `e(binname)'<., color(gs8%50))
+		else loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `=e(binname)'<=`=`marginalresponse'+`=e(cutoff)''&`=e(binname)'<., color(gs8%50)) (rarea `CI_l1' `CI_r1' `=e(binname)' if `=e(binname)'<.&inrange(`=e(binname)',`=e(cutoff)',`xmax'), color(gs8%50))	
 		}
 		
 		replace above=`e(binname)'>`e(cutoff)'
@@ -158,8 +158,8 @@ cap prog drop rfbunchplot
 		//Regular plot
 		if "`namelist'"=="`e(binname)'" {
 
-			loc lines (line `f0' `e(binname)', color(maroon))
-			loc background (bar frequency bin , color(navy%50) barwidth(`=e(bandwidth)')) 
+			loc lines (line `f0' `e(binname)' if `e(binname)'<., color(maroon))
+			loc background (bar frequency bin if bin<. , color(navy%50) barwidth(`=e(bandwidth)')) 
 			loc ytitle frequency
 			
 			if "`adjust'"=="" {
@@ -176,14 +176,14 @@ cap prog drop rfbunchplot
 		//alternative outcome/characterize plot
 			else  {
 				if `charvar'==0 {
-					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`e(cutoff)'+`marginalresponse''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`minabove', color(navy)) (line `f1' `e(binname)' if inrange(`e(binname)',`e(cutoff)',`minabove'), color(navy) lpattern(dash)) 
+					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`e(cutoff)'+`marginalresponse''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`minabove'&`e(binname)'<., color(navy)) (line `f1' `e(binname)' if inrange(`e(binname)',`e(cutoff)',`minabove'), color(navy) lpattern(dash)) 
 					loc background (scatter `namelist' bin `weight' if !inrange(bin,`=e(lower_limit)',`e(upper_limit)')&bin<., color(black) msymbol(circle_hollow)) (scatter `namelist' bin `weight' if inrange(bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
 				}
 				else {
 					cap su adj_bin if adj_bin>`e(cutoff)'
 					cap loc minabove=r(min)
-					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if `e(binname)'>=`minabove', color(maroon))  (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`minabove'), color(maroon) lpattern(dash))
-					loc background (scatter `namelist' adj_bin `weight' if !inrange(adj_bin,`e(lower_limit)',`e(upper_limit)')&adj_bin<., color(black) msymbol(circle_hollow)) (scatter `namelist' adj_bin `weight' if inrange(adj_bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
+					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)'&`e(binname)'<., color(maroon)) (line `f0' `e(binname)' if `e(binname)'>=`minabove'&`e(binname)'<., color(maroon))  (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`minabove')&`e(binname)'<., color(maroon) lpattern(dash))
+					loc background (scatter `namelist' adj_bin `weight' if !inrange(adj_bin,`e(lower_limit)',`e(upper_limit)')&adj_bin<., color(black) msymbol(circle_hollow)) (scatter `namelist' adj_bin `weight' if inrange(adj_bin,`e(lower_limit)',`e(cutoff)')&`e(binname)'<., color(maroon))
 				}
 							
 				gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
