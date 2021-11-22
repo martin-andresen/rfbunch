@@ -226,7 +226,7 @@ cap prog drop rfbunchplot
 			}
 			else {
 				if "`ci'"=="noci" su `=e(binname)'
-				else su y
+				else if "`means'"!="nomeans" su y
 				loc ymax=r(max)
 			}
 			
