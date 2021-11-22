@@ -225,9 +225,11 @@ cap prog drop rfbunchplot
 				loc ymax=r(max)
 			}
 			else {
+				su `namelist'
+				loc ymax=r(max)
 				if "`ci'"=="noci" su `=e(binname)'
 				else if "`means'"!="nomeans" su y
-				loc ymax=r(max)
+				if r(max)>`ymax'&r(max)<. loc ymax=r(max)
 			}
 			
 			if `marginalresponse'>0 loc xlinemarg xline(`=`marginalresponse'+`=e(cutoff)'', lpattern(dash) lcolor(navy))
