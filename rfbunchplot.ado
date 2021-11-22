@@ -4,7 +4,7 @@
 cap prog drop rfbunchplot
 	program rfbunchplot
 	
-	syntax [name], [graph_opts(string) parameters(string) noci nostar adjust limit(numlist min=2 max=2) weight]
+	syntax [name], [graph_opts(string) parameters(string) noci nostar adjust limit(numlist min=2 max=2) weight nomeans]
 	
 	quietly {
 		if "`=e(cmdname)'"!="rfbunch" {
@@ -202,9 +202,9 @@ cap prog drop rfbunchplot
 						replace `lim'=ci["`lim'","`namelist'_means:mean_bunchers_cf"] in 2
 						replace `lim'=ci["`lim'","`namelist'_means:mean_nonbunchers"] in 3
 					}
-					loc scatters (rcap ll ul x, color(dkgreen)) (scatter y x, color(dkgreen))	
+					if "`means'"!="nomeans" loc scatters (rcap ll ul x, color(dkgreen)) (scatter y x, color(dkgreen))	
 				}
-				else loc scatters (scatter y x, color(dkgreen))	
+				if "`means'"!="nomeans" else loc scatters (scatter y x, color(dkgreen))	
 			
 			if "`ci'"!="noci"{
 				if `charvar'==1 loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "polynomial fit") label(8 "estimated means") order(3 5 8 1) cols(2)
