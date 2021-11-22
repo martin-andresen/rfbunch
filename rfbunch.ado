@@ -277,6 +277,13 @@ program rfbunch, eclass sortpreserve
 			keep `varlist' `yvars' `characterize'
 			gen `useobs'= !inrange(`varlist',`zL',`zH')
 			
+			if "`local'"!="" {
+				su `varlist'
+				gen w=1-abs(`varlist'-`cutoff')/(`cutoff'-r(min)) if `varlist'<=`cutoff'
+				replace w=1-abs(`varlist'-`cutoff')/(r(max) - `cutoff') if `varlist'>`cutoff'
+				loc localweights [aw=w]
+				}
+					
 			tempname means integerbin adjustbin
 			tempvar predy f0 f1 f above fabove mean_b_cf
 			
@@ -291,12 +298,6 @@ program rfbunch, eclass sortpreserve
 			gen `above'=`varlist'>`cutoff'
 			loc i=0
 			foreach var in `yvars' `characterize' {
-				if "`local'"!="" {
-					su `varlist'
-					gen w=1-abs(`varlist'-`cutoff')/(`cutoff'-r(min)) if `varlist'<=`cutoff'
-					replace w=1-abs(`varlist'-`cutoff')/(r(max) - `cutoff') if `varlist'>`cutoff'
-					loc localweights [aw=w]
-					}
 				if `i'==`numyvars'&"`adjust'"=="x" replace `varlist'=`varlist'*shift if `varlist'>`cutoff'
 				loc ++i
 				if `=`polynomials'[`=`i'+1',1]'>0 {
