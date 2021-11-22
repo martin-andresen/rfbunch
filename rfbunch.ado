@@ -273,6 +273,8 @@ program rfbunch, eclass sortpreserve
 	
 		//ESTIMATE REPONSE ALONG OTHER ENDOGENOUS VARS or CHARACTERIZING VARS
 		if "`yvars'"!=""|"`characterize'"!="" {
+			if `B'<0 noi di as text "Mean counterfactual for bunchers and difference between bunchers means and this quantity cannot be calculated for alternative because B<0."
+			
 			preserve
 			drop if !`touse'
 			keep `varlist' `yvars' `characterize'
@@ -288,7 +290,7 @@ program rfbunch, eclass sortpreserve
 			tempname means integerbin adjustbin
 			tempvar predy f0 f1 f above fabove mean_b_cf
 			
-			if `type'<2&`hole'==0 gen `bin'=ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2 if `type'
+			if `type'<2&`hole'==0 gen `bin'=ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2
 			else gen `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + (`varlist'>`cutoff')*(floor((`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'+`bw'/2)			
 			sort `bin'
 			egen `integerbin'=group(`bin')
@@ -332,7 +334,6 @@ program rfbunch, eclass sortpreserve
 				drop `predy'
 				
 				if `B'<0 {
-					noi di as text "Mean counterfactual for bunchers and difference between bunchers means and this quantity cannot be calculated for alternative because B<0."
 					mat `b'=`b',`excess',mean_nonbunchers,`=`excess'/`B'+mean_nonbunchers'
 					loc names `names' excess_value mean_nonbunchers mean_bunchers
 					loc coleq `coleq' `var'_means `var'_means `var'_means
