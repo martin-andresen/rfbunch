@@ -282,7 +282,7 @@ program rfbunch, eclass sortpreserve
 			gen `useobs'= !inrange(`varlist',`zL',`zH')
 			
 			if "`local'"!="" {
-				if `localbw'==. {
+				if "`localbw'"=="" {
 					su `varlist'
 					loc bwlow=`cutoff'-r(min)
 					loc bwhi=r(max)-`cutoff'
