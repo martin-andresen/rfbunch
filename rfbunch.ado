@@ -14,6 +14,7 @@ program rfbunch, eclass sortpreserve
 	nofill ///
 	CHARacterize(varlist) ///
 	local ///
+	localbw(numlist min=1 max=1 >0) ///
 	constant ]
 	
 	quietly {
@@ -281,9 +282,19 @@ program rfbunch, eclass sortpreserve
 			gen `useobs'= !inrange(`varlist',`zL',`zH')
 			
 			if "`local'"!="" {
-				su `varlist'
-				gen w=1-abs(`varlist'-`cutoff')/(`cutoff'-r(min)) if `varlist'<=`cutoff'
-				replace w=1-abs(`varlist'-`cutoff')/(r(max) - `cutoff') if `varlist'>`cutoff'
+				if `localbw'==. {
+					su `varlist'
+					loc bwlow=`cutoff'-r(min)
+					loc bwhi=r(max)-`cutoff'
+					}
+				else {
+					loc bwlow=`localbw'
+					loc bwhi=`localbw'
+					}
+				
+				
+				gen w=1-abs(`varlist'-`cutoff')/`bwlow' if `varlist'<=`cutoff'
+				replace w=1-abs(`varlist'-`cutoff')/`bwhi' if `varlist'>`cutoff'
 				loc localweights [aw=w]
 				}
 					
