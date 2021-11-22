@@ -185,26 +185,28 @@ cap prog drop rfbunchplot
 					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)'&`e(binname)'<., color(maroon)) (line `f0' `e(binname)' if `e(binname)'>=`minabove'&`e(binname)'<., color(maroon))  (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`minabove')&`e(binname)'<., color(maroon) lpattern(dash))
 					loc background (scatter `namelist' adj_bin `weight' if !inrange(adj_bin,`e(lower_limit)',`e(upper_limit)')&adj_bin<., color(black) msymbol(circle_hollow)) (scatter `namelist' adj_bin `weight' if inrange(adj_bin,`e(lower_limit)',`e(cutoff)')&`e(binname)'<., color(maroon))
 				}
-							
-				gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
-				gen y=_b[`namelist'_means:mean_bunchers] in 1
-				cap scalar b=_b[bunching:average_response]
-				if _rc==0 {
-					replace x=`=e(cutoff)'+_b[bunching:average_response] in 2
-					replace y=_b[`namelist'_means:mean_bunchers_cf] in 2
+				
+				if "`means'"!="nomeans" {
+					gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
+					gen y=_b[`namelist'_means:mean_bunchers] in 1
+					cap scalar b=_b[bunching:average_response]
+					if _rc==0 {
+						replace x=`=e(cutoff)'+_b[bunching:average_response] in 2
+						replace y=_b[`namelist'_means:mean_bunchers_cf] in 2
+						}
+					replace x=_b[bunching:mean_nonbunchers] in 3
+					replace y=_b[`namelist'_means:mean_nonbunchers] in 3
+					if "`ci'"!="noci" {
+						mat ci=e(ci_normal)
+						foreach lim in ll ul {
+							gen `lim' =ci["`lim'","`namelist'_means:mean_bunchers"] in 1
+							replace `lim'=ci["`lim'","`namelist'_means:mean_bunchers_cf"] in 2
+							replace `lim'=ci["`lim'","`namelist'_means:mean_nonbunchers"] in 3
+						}
+						loc scatters (rcap ll ul x, color(dkgreen)) (scatter y x, color(dkgreen))	
 					}
-				replace x=_b[bunching:mean_nonbunchers] in 3
-				replace y=_b[`namelist'_means:mean_nonbunchers] in 3
-				if "`ci'"!="noci" {
-					mat ci=e(ci_normal)
-					foreach lim in ll ul {
-						gen `lim' =ci["`lim'","`namelist'_means:mean_bunchers"] in 1
-						replace `lim'=ci["`lim'","`namelist'_means:mean_bunchers_cf"] in 2
-						replace `lim'=ci["`lim'","`namelist'_means:mean_nonbunchers"] in 3
-					}
-					if "`means'"!="nomeans" loc scatters (rcap ll ul x, color(dkgreen)) (scatter y x, color(dkgreen))	
+					else loc scatters (scatter y x, color(dkgreen))	
 				}
-				if "`means'"!="nomeans" else loc scatters (scatter y x, color(dkgreen))	
 			
 			if "`ci'"!="noci"{
 				if `charvar'==1 loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "polynomial fit") label(8 "estimated means") order(3 5 8 1) cols(2)
