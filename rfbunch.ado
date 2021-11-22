@@ -13,6 +13,7 @@ program rfbunch, eclass sortpreserve
 	ADJust(string) ///
 	nofill ///
 	CHARacterize(varlist) ///
+	local ///
 	constant ]
 	
 	quietly {
@@ -290,7 +291,12 @@ program rfbunch, eclass sortpreserve
 			gen `above'=`varlist'>`cutoff'
 			loc i=0
 			foreach var in `yvars' `characterize' {
-				
+				if "`local'"!="" {
+					su `varlist'
+					gen w=1-abs(`varlist'-`cutoff')/(`cutoff'-r(min)) if `varlist'<=`cutoff'
+					replace w=1-abs(`varlist'-`cutoff')/(r(max) - `cutoff') if `varlist'>`cutoff'
+					loc localweights [aw=w]
+					}
 				if `i'==`numyvars'&"`adjust'"=="x" replace `varlist'=`varlist'*shift if `varlist'>`cutoff'
 				loc ++i
 				if `=`polynomials'[`=`i'+1',1]'>0 {
@@ -301,11 +307,11 @@ program rfbunch, eclass sortpreserve
 				}
 				
 				if `i'>`numyvars' {
-					reg `var' `rhsvars'  if `useobs'
+					reg `var' `rhsvars'  `localweights' if `useobs'
 				}
 				else {
-					if `=`polynomials'[`=`i'+1',1]'>0 reg `var' `rhsvars' 1.`above' 1.`above'#(`rhsvars')  if `useobs'
-					else reg `var' 1.`above' if `useobs'
+					if `=`polynomials'[`=`i'+1',1]'>0 reg `var' `rhsvars' 1.`above' 1.`above'#(`rhsvars')  `localweights'  if `useobs'
+					else reg `var' 1.`above' `localweights'  if `useobs'
 				}
 				mat `b'=`b',e(b)
 				mat `f'=e(b)
