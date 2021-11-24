@@ -15,7 +15,8 @@ program rfbunch, eclass sortpreserve
 	CHARacterize(varlist) ///
 	local ///
 	localbw(numlist min=1 max=1 >0) ///
-	constant ]
+	constant ///
+	placebo ]
 	
 	quietly {
 
@@ -233,8 +234,8 @@ program rfbunch, eclass sortpreserve
 		mata: st_matrix("`freq0tau'",(polyeval(st_matrix("`cf'"),`cutoff')))
 		loc B=`=`Bunchmass'-`freq0b'[1,1]'
 		mat `b'=`b',`B',`=`B'/`N'',`=`B'/`freq0b'[1,1]',`=`B'/`freq0tau'[1,1]' //Number of bunchers, bunchers share of sample, normalized bunching, excess mass
-		loc coleq `coleq' bunching bunching bunching bunching bunching 
-		loc names `names' number_bunchers share_sample normalized_bunching excess_mass mean_nonbunchers
+		loc coleq `coleq' bunching bunching bunching bunching
+		loc names `names' number_bunchers share_sample normalized_bunching excess_mass 
 		
 		if "`constant'"!="constant" {
 			mata: meannonbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((0,st_matrix("`cf'")),1),`zL'))/(polyeval(polyinteg((st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((st_matrix("`cf'")),1),`zL'))
@@ -242,12 +243,15 @@ program rfbunch, eclass sortpreserve
 			}
 		else scalar meannonbunch=(`cutoff'-`zL')/2
 		
-		if `B'<0 {
-		noi di as text "Negative estimates of B - no bunching in the bunching region. Marginal response, total response and counterfactual mean among bunchers cannot be calculated."
-		mat `b'=`b',meannonbunch
-		}
-		else {
+		if `B'<0|"`placebo'"!="" {
+			if `B'<0&"`placebo'"=="" noi di as text "Negative estimates of B - no bunching in the bunching region. Marginal response, total response and counterfactual mean among bunchers cannot be calculated."
+			mat `b'=`b',meannonbunch
+			loc coleq `coleq' bunching
+			loc names `names' mean_nonbunchers
 			
+			}
+		else {
+			noi di "maintest"
 			if "`constant'"!="constant" {
 				mata: eresp=eresp(`B',`cutoff',st_matrix("`cf'"),`bw')
 				mata: st_numscalar("eresp",eresp)
@@ -264,8 +268,8 @@ program rfbunch, eclass sortpreserve
 				scalar totalresponse=eresp*`predcut'
 				}
 			
-			loc coleq `coleq' bunching bunching bunching
-			loc names `names' marginal_response total_response average_response
+			loc coleq `coleq' bunching bunching bunching bunching
+			loc names `names' mean_nonbunchers marginal_response total_response average_response
 			mat `b'=`b',meannonbunch,eresp,totalresponse,meanbunch
 			}
 
@@ -344,20 +348,20 @@ program rfbunch, eclass sortpreserve
 				su `predy'
 				loc excess=r(sum)
 				drop `predy'
+				mat `b'=`b',`excess',mean_nonbunchers
 				
-				if `B'<0 {
-					mat `b'=`b',`excess',mean_nonbunchers,`=`excess'/`B'+mean_nonbunchers'
-					loc names `names' excess_value mean_nonbunchers mean_bunchers
-					loc coleq `coleq' `var'_means `var'_means `var'_means
+				loc names `names' excess_value mean_nonbunchers
+				loc coleq `coleq' `var'_means `var'_means
+				if `B'>0&"`placebo'"=="" {
+					noi di "endogtest"
+					mata: mean_counterfactual=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff'+`=eresp')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff'+`=eresp')-polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff'))
+					mata: st_numscalar("mean_b_cf",mean_counterfactual)
+					mat `b'=`b',`=`excess'/`B'+mean_nonbunchers',mean_b_cf,`=`excess'/`B'+mean_nonbunchers-mean_b_cf'
+					loc names `names' mean_bunchers mean_bunchers_cf bunchers_diff
+					loc coleq `coleq' `var'_means `var'_means `var'_means 
+				
 					}
-				else {
-				mata: mean_counterfactual=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff'+`=eresp')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff'+`=eresp')-polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff'))
-				mata: st_numscalar("mean_b_cf",mean_counterfactual)
-				mat `b'=`b',`excess',mean_nonbunchers,`=`excess'/`B'+mean_nonbunchers',mean_b_cf,`=`excess'/`B'+mean_nonbunchers-mean_b_cf'
-				loc names `names' excess_value mean_nonbunchers mean_bunchers mean_bunchers_cf bunchers_diff
-				loc coleq `coleq' `var'_means `var'_means `var'_means `var'_means `var'_means
-				}
-				
+					
 				if "`adjust'"!="x"|`i'<=`numyvars' {
 					reg `var' ibn.`integerbin', nocons
 					mat `means'=e(b)
