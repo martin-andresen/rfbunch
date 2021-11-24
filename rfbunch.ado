@@ -225,6 +225,7 @@ program rfbunch, eclass sortpreserve
 			mat `b'=`b'[1,2..`=colsof(`b')'],`b'[1,1]
 			fvexpand `rhsvars'
 			loc names `r(varlist)' _cons
+			scalar shift=1
 		}
 		
 		tempname freq0b freq0tau
