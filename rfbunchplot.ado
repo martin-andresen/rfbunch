@@ -1,4 +1,4 @@
-*! rfbunchplot version date 20211007
+*! rfbunchplot version date 20211130
 * Author: Martin Eckhoff Andresen
 * This program is part of the rfbunch package.
 cap prog drop rfbunchplot
@@ -16,10 +16,6 @@ cap prog drop rfbunchplot
 		preserve
 		if "`namelist'"=="" loc namelist `=e(binname)'
 		else if "`namelist'"!="`e(binname)'" {
-			if "`adjust'"!="" {
-				noi di as error "Option adjust can only be used when plotting main bunching plots - do not specify a variable name other than the running variable"
-				exit
-			}
 			mat b=e(b)
 			cap mat b=b[.,"`namelist':"]
 			if _rc!=0 {
@@ -56,13 +52,14 @@ cap prog drop rfbunchplot
 		loc minabove=r(min)
 		
 
-		cap confirm matrix e(adj_freq)
-		if _rc==0&(("`namelist'"!="`e(binname)'"&`charvar'==1)|("`namelist'"=="`e(binname)'"&"`adjust'"!="")) {
-			mat `f'=e(adj_freq)
-			svmat `f', names(col)
-			su adj_bin
-			if r(max)>`xmax' loc xmax=r(max)
+		if "`adjust'"!="" {
+			cap confirm matrix e(adj_table)
+			if _rc==0 {
+				mat `f'=e(adj_table)
+				svmat `f', names(col)
+				if r(max)>`xmax' loc xmax=r(max)
 			}
+		}
 		
 		sort `e(binname)'
 		
@@ -135,16 +132,13 @@ cap prog drop rfbunchplot
 		
 		//adjust option
 		if "`adjust'"!="" {
-			if "`namelist'"!="`e(binname)'" {
-				noi di as error "Option adjust only for use with basic bunch plots - do not specify alternative plotting variable."
-				exit
-			}
 			if "`e(adjustment)'"=="" {
 				noi di as error "No adjustment was made to estimates in e(). Do not specify adjust unless estimates used adjustment".
 				exit 
 			}
 			
-			loc adjplot (bar adj_freq adj_bin if adj_bin>`=e(upper_limit)*_b[bunching:shift]', barwidth(`=e(bandwidth)') color(maroon%50))
+			if "`namelist'"=="`e(binname)'" loc adjplot (bar adj_freq adj_bin if adj_bin>`=e(upper_limit)', barwidth(`=e(bandwidth)') color(maroon%50))
+			else loc adjplot (scatter adj_`namelist' adj_bin if adj_bin>`=e(upper_limit)', msymbol(circle_hollow) color(maroon))
 			}
 			
 		//limit option
