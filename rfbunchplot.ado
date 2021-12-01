@@ -22,11 +22,10 @@ cap prog drop rfbunchplot
 				noi di as error "Variable `namelist' not present as additional endogenous variable in estimates in memory."
 				exit
 			}
-			
+			tempname xtypes
+			mat `xtypes'=e(xtypes)
+			loc xtype=`xtypes'["`namelist'",1]	
 		}
-		
-		if strpos("`=e(characterize)'","`namelist'")>0 loc charvar=1
-		else loc charvar=0
 		
 		cap confirm matrix e(V)
 		if _rc!=0 {
@@ -73,9 +72,14 @@ cap prog drop rfbunchplot
 
 		gen above=0
 		predict double `f0', eq(`eq')
-		if `charvar'==0&"`namelist'"!="`e(binname)'" {
-			replace above=1
-			predict double `f1', eq(`eq')
+		if "`xtype'"!=""&"`xtype'"!="3" {
+			if `xtype'==1 {
+				gen double `f1'=`f0'/(1+_b[`namelist':above])
+				}
+			else {
+				replace above=1
+				predict double `f1', eq(`eq')
+			}
 		}
 		
 		if "`ci'"!="noci"  {
@@ -83,14 +87,14 @@ cap prog drop rfbunchplot
 			predict double `error', stdp eq(`eq')
 			gen double `CI_l0'=`f0'-invnormal(0.975)*`error'
 			gen double `CI_r0'=`f0'+invnormal(0.975)*`error'
-			if `charvar'==0&"`namelist'"!="`e(binname)'" {
+			if "`namelist'"!="`e(binname)'" {
 				drop `error'
 				predict double `error', stdp eq(`eq')
 				gen double `CI_l1'=`f1'-invnormal(0.975)*`error'
 				gen double `CI_r1'=`f1'+invnormal(0.975)*`error'
 				drop `error'
 			}
-		if "`=e(binname)'"=="`namelist'"|`charvar'==1 loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `e(binname)'<., color(gs8%50))
+		if "`=e(binname)'"=="`namelist'"|`xtype'==3 loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `e(binname)'<., color(gs8%50))
 		else loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `=e(binname)'<=`=`marginalresponse'+`=e(cutoff)''&`=e(binname)'<., color(gs8%50)) (rarea `CI_l1' `CI_r1' `=e(binname)' if `=e(binname)'<.&inrange(`=e(binname)',`=e(cutoff)',`xmax'), color(gs8%50))	
 		}
 		
@@ -169,14 +173,14 @@ cap prog drop rfbunchplot
 		
 		//alternative outcome/characterize plot
 			else  {
-				if `charvar'==0 {
+				if `xtype'==3 {
 					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`e(cutoff)'+`marginalresponse''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`minabove'&`e(binname)'<., color(navy)) (line `f1' `e(binname)' if inrange(`e(binname)',`e(cutoff)',`minabove'), color(navy) lpattern(dash)) 
 					loc background (scatter `namelist' bin `weight' if !inrange(bin,`=e(lower_limit)',`e(upper_limit)')&bin<., color(black) msymbol(circle_hollow)) (scatter `namelist' bin `weight' if inrange(bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
 				}
 				else {
 					cap su adj_bin if adj_bin>`e(cutoff)'
 					cap loc minabove=r(min)
-					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)'&`e(binname)'<., color(maroon)) (line `f0' `e(binname)' if `e(binname)'>=`minabove'&`e(binname)'<., color(maroon))  (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`minabove')&`e(binname)'<., color(maroon) lpattern(dash))
+					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)'&`e(binname)'<., color(maroon)) (line `f0' `e(binname)' if `e(binname)'>=`minabove'&`e(binname)'<., color(maroon))  (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`minabove')&`e(binname)'<., color(maroon) lpattern(dash))  (line `f1' `e(binname)' if `e(binname)'>`e(cutoff)'+`marginalresponse'&`e(binname)'<., color(navy)) (line `f1' `e(binname)' if `e(binname)'>`e(cutoff)'&`e(binname)'<`e(cutoff)'+`marginalresponse', color(navy) lpattern(dash))
 					loc background (scatter `namelist' adj_bin `weight' if !inrange(adj_bin,`e(lower_limit)',`e(upper_limit)')&adj_bin<., color(black) msymbol(circle_hollow)) (scatter `namelist' adj_bin `weight' if inrange(adj_bin,`e(lower_limit)',`e(cutoff)')&`e(binname)'<., color(maroon))
 				}
 				
@@ -203,11 +207,11 @@ cap prog drop rfbunchplot
 				}
 			
 			if "`ci'"!="noci"{
-				if `charvar'==1 loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "polynomial fit") label(8 "estimated means") order(3 5 8 1) cols(2)
+				if `xtype'==3 loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "polynomial fit") label(8 "estimated means") order(3 5 8 1) cols(2)
 				else loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "polynomial fit") label(10 "estimated means") order(3 5 10 1) cols(2)
 			} 
 			else {
-				if `charvar'==1 loc labels label(1 "mean in bin") label(3 "polynomial fit") label(6 "estimated means") order(1 3 6) cols(3)
+				if `xtype'==3 loc labels label(1 "mean in bin") label(3 "polynomial fit") label(6 "estimated means") order(1 3 6) cols(3)
 				else loc labels label(1 "mean in bin") label(3 "polynomial fit") label(7 "estimated means") order(1 3 7) cols(3)
 			}
 			loc ytitle `namelist'

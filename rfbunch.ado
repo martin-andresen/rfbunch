@@ -16,8 +16,7 @@ program rfbunch, eclass sortpreserve
 	nofill ///
 	constant ///
 	placebo ///
-	xtype(numlist) ///
-	mu(numlist min=1 max=1 >0 <1) ///
+	xtype(numlist <=3 >=0) ///
 	]
 	
 	quietly {
@@ -42,11 +41,11 @@ program rfbunch, eclass sortpreserve
 		else {
 			foreach pol in `polynomial' {
 				mat `polynomials'=nullmat(`polynomials') \ `pol'	
-				loc lastpol=`pol'
 				}
 				if `numpoly'<`numxvars'+1&`numpoly'>1 {
 					forvalues k=1/`=`numxvars'+1-`=rowsof(`polynomials')'' {
-					mat `polynomials'=`polynomials' \ `lastpol'
+						if `k'>`numyvars'+1 mat `polynomials'=`polynomials' \ 7
+						else mat `polynomials'=`polynomials' \ `pol'
 					}
 				}
 			}
@@ -68,12 +67,11 @@ program rfbunch, eclass sortpreserve
 					exit 301
 				}
 				foreach xval in `xtype' {
-					loc lastxval=`xval'
 					mat `xtypes'=nullmat(`xtypes') \ `xval'
 				}
 				
 				forvalues k=1/`=`numxvars'-`numxvals'' {
-					mat `xtypes'=nullmat(`xtypes') \ `lastxval'
+					mat `xtypes'=nullmat(`xtypes') \ `xval'
 				}
 			}
 		
@@ -90,6 +88,7 @@ program rfbunch, eclass sortpreserve
 			noi di in red "moremata needed. Install using "ssc install moremata"".
 			exit 301
 			}
+		
 		if "`adjust'"!="" {
 			if !inlist("`adjust'","y","x","none","logx") {
 				noi di in red "Option adjust can only take values y (Chetty et al.), x and logx (Andresen and Thorvaldsen) or none"
@@ -118,7 +117,7 @@ program rfbunch, eclass sortpreserve
 		
 		if "`localbw'"!="" {
 			if "`localbw'"!="rdbw" {
-				cap confirm number `localbw'
+				cap confirm scalar `localbw'
 				if _rc!=0 {
 					noi di in red "Option localbw() can only take the values rdbw or a single nonnegative number."
 					exit 301
@@ -309,10 +308,11 @@ program rfbunch, eclass sortpreserve
 			
 			}
 			
+		noi di `B'
+		noi di shift
 		else {
 			if "`constant'"!="constant" {
 				mata: eresp=eresp(`B',`cutoff',st_matrix("`cf'"),`bw')
-				mata: st_numscalar("eresp",eresp)
 				if eresp==. {
 					noi di as error 	"No real roots found above the cutoff to the integral of the counterfactual."
 					noi di as error 	"Marginal response and various other parameters cannot be estimated. You could"
@@ -320,7 +320,7 @@ program rfbunch, eclass sortpreserve
 					noi di as error		"specifying the option constant."
 					exit 301
 				}
-				
+				mata: st_numscalar("eresp",eresp)
 				mata: meanbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))/(`bw'*`B')-(`cutoff')
 				mata: st_numscalar("meanbunch",meanbunch)
 				mata: totalresponse=(1/`bw')*(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))-(`cutoff'*`B')
@@ -355,7 +355,6 @@ program rfbunch, eclass sortpreserve
 			loc N_bunchreg=r(N)
 			
 			if "`localbw'"!="" {
-				tempname localbws
 				if "`localbw'"!="rdbw" {
 					if `localbw'==0 {
 						su `varlist'
@@ -396,15 +395,14 @@ program rfbunch, eclass sortpreserve
 				gen `adjustz'=`varlist'+shift*`varlist'*(`varlist'>`cutoff')
 				}
 			else if `type'==3 {
-				replace `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + ((`varlist'>`cutoff')*(floor((`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'+log(1+shift)+`bw'/2))
-				
-				gen `adjustz'=`varlist'+log(1+shift)*(`varlist'>`cutoff')				
+				replace `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + ((`varlist'>`cutoff')*(floor(log(1+shift)+(`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'+log(1+shift)+`bw'/2))
+				gen `adjustz'=`varlist'+shift*(`varlist'>`cutoff')				
 				}
 			egen `adjustbin'=group(`bin')
 			
 			gen `above'=`varlist'>`cutoff'
 			loc i=0
-			foreach var in `xvars' {
+			foreach var in `xvars' `characterize' {
 				loc ++i
 				
 				if "`localbw'"=="rdbw" {
@@ -418,33 +416,42 @@ program rfbunch, eclass sortpreserve
 					
 				if `=`polynomials'[`=`i'+1',1]'>0 {
 					forvalues k=1/`=`polynomials'[`=`i'+1',1]' {
-						if `xtypes'[`i',1]==0|inlist("`adjust'","none","y","") loc xvar `varlist'
+						if `xtypes'[`i',1]==0|inlist("`adjust'","none","","y") loc xvar `varlist'
 						else loc xvar `adjustz'
 						if `k'==1 loc rhsvars c.`xvar'
 						else loc rhsvars `rhsvars'##c.`xvar'
+						if `xtypes'[`i',1]==1 {
+							loc rhsvars0 `rhsvars0' {beta`k'}*`xvar'^`k'+
+							loc rhsvars1 `rhsvars1' {beta`k'}*`xvar'^`k'/(1+{gamma}*(`xvar'>`cutoff'))+
+						}
 					}
 				}
-				else loc rhsvars 1.`above'
 				
 				if `xtypes'[`i',1]==0  reg `var' `rhsvars' 1.`above' 1.`above'#(`rhsvars')  `localweights'  if `useobs' //no link
-				else if `xtypes'[`i',1]==1  reg `var' `rhsvars' 1.`above' `localweights'  if `useobs' //assume x0/x1=constant
-				else if `xtypes'[`i',1]==2 reg `var' `rhsvars'  `localweights' if `useobs' //characterize, assume x0==x1
-				
-				if "`var'"=="logK" {
-					noi eret di
-					loc Kabove=_b[1.`above']
+				else if `xtypes'[`i',1]==1  {
+					reg `var' `rhsvars' if `varlist'<`cutoff'
+					tempname init
+					mat `init'=e(b)
+					forvalues k=1/`=colsof(`init')-1' {
+						loc initials `initials' beta`k' `=`init'[1,`k']'
+					}
+					noi nl (`var'= `rhsvars1' {beta0}/(1+{gamma}*(`xvar'>`cutoff'))) if `useobs', initial(beta0 `=_b[_cons]' `initials' gamma 0)
+					fvexpand `rhsvars'
+					loc names `names' `=subinstr("`=subinstr("`r(varlist)'","`adjustz'","`varlist'",.)'","1.`above'","above",.)' above _cons
 				}
+				else if `xtypes'[`i',1]==2 reg `var' `rhsvars' 1.`above' `localweights'  if `useobs' //assume x0/x1=constant, y in logs
+				else if `xtypes'[`i',1]==3 reg `var' `rhsvars'  `localweights' if `useobs' //characterize, assume x0==x1
 				
 				mat `b'=`b',e(b)
 				mat `f'=e(b)
 				
-				
-				if `=`polynomials'[`=`i'+1',1]'>0 mat `f'=_b[_cons],`f'[1,1..`=`polynomials'[`=`i'+1',1]']
+				if `=`polynomials'[`=`i'+1',1]'>0 mat `f'=`f'[1,`=colsof(`f')'],`f'[1,1..`=`polynomials'[`=`i'+1',1]']
 				else mat `f'=_b[_cons]
-				mata:mean_nonbunchers=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`zL'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff')-polyeval(polyinteg(st_matrix("`cf'"),1),`zL'))
+				noi mat li `f'
+				mata:mean_nonbunchers=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`zL'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff')-polyeval(polyinteg(st_matrix("`cf'"),1),`zL'))	
 				mata: st_numscalar("mean_nonbunchers",mean_nonbunchers)
 				local colnames: colnames e(b)
-				loc names `names' `=subinstr("`=subinstr("`colnames'","`adjustz'","`varlist'",.)'","1.`above'","above",.)'
+				if `xtypes'[`i',1]!=1 loc names `names' `=subinstr("`=subinstr("`colnames'","`adjustz'","`varlist'",.)'","1.`above'","above",.)'
 				forvalues j=1/`=colsof(e(b))' {
 					loc coleq `coleq' `var'
 				}
@@ -477,7 +484,6 @@ program rfbunch, eclass sortpreserve
 					mat `adj_table'=`adj_table',`means''
 					loc adjnames `adjnames' adj_`var'
 				}
-				
 				
 				
 				}
@@ -515,11 +521,6 @@ program rfbunch, eclass sortpreserve
 			loc names `names' elasticity
 			loc coleq `coleq' notch
 		}
-		if "`mu'"!="" {
-			loc coleq `coleq' tcr
-			loc names `names' mu
-			mat `b'=`b',(`Kabove'-log(1+shift))/log(1-`mu')
-		}
 
 
 		mat colnames `b'=`names'
@@ -531,7 +532,7 @@ program rfbunch, eclass sortpreserve
 		ereturn scalar cutoff=`cutoff'
 		ereturn scalar lower_limit=`zL'
 		ereturn scalar upper_limit=`zH'
-		if "`localbw'"=="rdbwselect" {
+		if "`localbw'"=="rdbw" {
 			mat rownames `localbws'=`yvars' `characterize'
 			ereturn matrix localbws = `localbws'
 		}
@@ -539,8 +540,7 @@ program rfbunch, eclass sortpreserve
 		//ereturn scalar max=`hi'
 		
 		ereturn local binname `varlist'
-		ereturn local indepvars `yvars'
-		if "`characterize'"!="" ereturn local characterize `characterize'
+		ereturn local indepvars `xvars'
 		mat colnames `table'=`colfreq'
 		ereturn matrix table=`table'
 		if "`adjust'"!="none"&"`adjust'"!="" {
@@ -548,6 +548,7 @@ program rfbunch, eclass sortpreserve
 			ereturn matrix adj_table=`adj_table'
 			ereturn local adjustment="`adjust'"
 			}
+		if "`xvars'"!="" ereturn matrix xtypes=`xtypes'
 		ereturn local cmdname "rfbunch"
 		noi eret di
 
