@@ -44,7 +44,7 @@ cap prog drop rfbunchplot
 		mat `f'=e(table)
 		svmat `f', names(col)
 	
-		noi su `e(binname)'
+		su `e(binname)'
 		loc xmin=r(min)
 		loc xmax=r(max)
 		su `e(binname)' if `e(binname)'>`e(cutoff)'+1e-23
