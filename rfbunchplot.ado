@@ -75,9 +75,10 @@ cap prog drop rfbunchplot
 
 		gen above=0
 		predict double `f0', eq(`eq')
+		noi su `f0' `e(binname)' `namelist'
 		if "`xtype'"!=""&"`xtype'"!="3" {
 			if `xtype'==1 {
-				gen double `f1'=`f0'/(1+_b[`namelist':above])
+				gen double `f1'=`f0'*(1+_b[`namelist':above])
 				}
 			else {
 				replace above=1
@@ -187,15 +188,16 @@ cap prog drop rfbunchplot
 				}
 				
 				if "`means'"!="nomeans" {
-					gen x=`=e(cutoff)'-`e(bandwidth)'/4 in 1
-					gen y=_b[`namelist'_means:mean_bunchers] in 1
+					tempvar x y
+					gen `x'=`=e(cutoff)'-`e(bandwidth)'/4 in 1
+					gen `y'=_b[`namelist'_means:mean_bunchers] in 1
 					cap scalar b=_b[bunching:average_response]
 					if _rc==0 {
-						replace x=`=e(cutoff)'+_b[bunching:average_response] in 2
-						replace y=_b[`namelist'_means:mean_bunchers_cf] in 2
+						replace `x'=`=e(cutoff)'+_b[bunching:average_response] in 2
+						replace `y'=_b[`namelist'_means:mean_bunchers_cf] in 2
 						}
-					replace x=_b[bunching:mean_nonbunchers] in 3
-					replace y=_b[`namelist'_means:mean_nonbunchers] in 3
+					replace `x'=_b[bunching:mean_nonbunchers] in 3
+					replace `y'=_b[`namelist'_means:mean_nonbunchers] in 3
 					if "`ci'"!="noci" {
 						mat ci=e(ci_normal)
 						foreach lim in ll ul {
@@ -203,9 +205,9 @@ cap prog drop rfbunchplot
 							replace `lim'=ci["`lim'","`namelist'_means:mean_bunchers_cf"] in 2
 							replace `lim'=ci["`lim'","`namelist'_means:mean_nonbunchers"] in 3
 						}
-						loc scatters (rcap ll ul x, color(dkgreen)) (scatter y x, color(dkgreen))	
+						loc scatters (rcap ll ul `x', color(dkgreen)) (scatter `y' `x', color(dkgreen))	
 					}
-					else loc scatters (scatter y x, color(dkgreen))	
+					else loc scatters (scatter `y' `x', color(dkgreen))	
 				}
 			
 			if "`ci'"!="noci"{

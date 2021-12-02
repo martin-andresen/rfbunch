@@ -413,13 +413,15 @@ program rfbunch, eclass sortpreserve
 					}
 					
 				if `=`polynomials'[`=`i'+1',1]'>0 {
+					loc rhsvarsnl
+					loc rhsvars
 					forvalues k=1/`=`polynomials'[`=`i'+1',1]' {
 						if `xtypes'[`i',1]==0|inlist("`adjust'","none","","y") loc xvar `varlist'
 						else loc xvar `adjustz'
 						if `k'==1 loc rhsvars c.`xvar'
 						else loc rhsvars `rhsvars'##c.`xvar'
 						if `xtypes'[`i',1]==1 {
-								loc rhsvarsnl `rhsvarsnl' {beta`k'}*`xvar'^`k'/(1+{gamma}*`above')+
+								loc rhsvarsnl `rhsvarsnl' {beta`k'}*`xvar'^`k'*(1+{gamma}*`above')+
 						}
 					}
 				}
@@ -429,11 +431,11 @@ program rfbunch, eclass sortpreserve
 					reg `var' `rhsvars' if `varlist'<`zL'
 					tempname init
 					mat `init'=e(b)
+					loc initials
 					forvalues k=1/`=colsof(`init')-1' {
 						loc initials `initials' beta`k' `=`init'[1,`k']'
 					}
-
-					nl (`var'= `rhsvarsnl' {beta0}/(1+{gamma}*`above') ) if `useobs', initial(beta0 `=_b[_cons]' `initials' gamma 0)
+					nl (`var'= `rhsvarsnl' {beta0}*(1+{gamma}*`above') ) if `useobs', initial(beta0 `=_b[_cons]' `initials' gamma 0)
 					fvexpand `rhsvars'
 					loc names `names' `=subinstr("`=subinstr("`r(varlist)'","`adjustz'","`varlist'",.)'","1.`above'","above",.)' above _cons
 				}
