@@ -259,17 +259,14 @@ program rfbunch, eclass sortpreserve
 		mat `cutvals'=1 \ `cutvals'
 		
 		mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`zH',0,`type',0,`cutoff',`hole'))
-		n
 		//Get counterfactual and adjust, if using
 		if inlist("`adjust'","x","y","logx") {
 			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`=`polynomials'[1,1]',`BM',`bw',`type',10,0,`fill',`cutoff',`hole')
 			mata: st_matrix("`b'",shift)
-			noi mat li `b'
 			mata: st_matrix("`adj_table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`cutoff',`=`b'[1,`=colsof(`b')']',`type',0,`cutoff',`hole'))
-			noi mat li `adj_table'
 			mat `cf'=`b'[1,1..`=colsof(`b')-1']
 			mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
-			scalar shift=`b'[1,`=colsof(`b')']
+			local shift=`b'[1,`=colsof(`b')']
 			fvexpand `rhsvars'
 			loc names `r(varlist)' _cons shift
 			loc coleq `coleq' bunching
@@ -285,7 +282,7 @@ program rfbunch, eclass sortpreserve
 			mat `b'=`b'[1,2..`=colsof(`b')'],`b'[1,1]
 			fvexpand `rhsvars'
 			loc names `r(varlist)' _cons
-			scalar shift=0
+			local shift=0
 		}
 		
 		tempname freq0b freq0tau
@@ -310,8 +307,6 @@ program rfbunch, eclass sortpreserve
 			
 			}
 			
-		noi di `B'
-		noi di shift
 		else {
 			if "`constant'"!="constant" {
 				mata: eresp=eresp(`B',`cutoff',st_matrix("`cf'"),`bw')
@@ -393,18 +388,18 @@ program rfbunch, eclass sortpreserve
 			egen `integerbin'=group(`bin')
 			
 			if `type'==2 {
-				replace `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + ((`varlist'>`cutoff')*(floor((1+shift)*(`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'*(1+shift)+`bw'/2))
-				gen `adjustz'=`varlist'+shift*`varlist'*(`varlist'>`cutoff')
+				replace `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + ((`varlist'>`cutoff')*(floor(((`varlist'-`minabove'+2^-23)/(1+`shift'))/`bw')*`bw'+`minabove'/(1+`shift')+`bw'/2))
+				gen `adjustz'=`varlist'/(1+`shift'*(`varlist'>`cutoff'))
 				}
 			else if `type'==3 {
-				replace `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + ((`varlist'>`cutoff')*(floor(log(1+shift)+(`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'+log(1+shift)+`bw'/2))
-				gen `adjustz'=`varlist'+shift*(`varlist'>`cutoff')				
+				replace `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + ((`varlist'>`cutoff')*(floor(-log(1+`shift')+(`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'-log(1+`shift')+`bw'/2))
+				gen `adjustz'=`varlist'-log(1+`shift')*(`varlist'>`cutoff')				
 				}
 			egen `adjustbin'=group(`bin')
 			
 			gen `above'=`varlist'>`cutoff'
 			loc i=0
-			foreach var in `xvars' `characterize' {
+			foreach var in `xvars' {
 				loc ++i
 				
 				if "`localbw'"=="rdbw" {
@@ -423,21 +418,23 @@ program rfbunch, eclass sortpreserve
 						if `k'==1 loc rhsvars c.`xvar'
 						else loc rhsvars `rhsvars'##c.`xvar'
 						if `xtypes'[`i',1]==1 {
-							loc rhsvars0 `rhsvars0' {beta`k'}*`xvar'^`k'+
-							loc rhsvars1 `rhsvars1' {beta`k'}*`xvar'^`k'/(1+{gamma}*(`xvar'>`cutoff'))+
+								loc rhsvarsnl `rhsvarsnl' {beta`k'}*`xvar'^`k'/(1+{gamma}*`above')+
 						}
 					}
 				}
 				
 				if `xtypes'[`i',1]==0  reg `var' `rhsvars' 1.`above' 1.`above'#(`rhsvars')  `localweights'  if `useobs' //no link
 				else if `xtypes'[`i',1]==1  {
-					reg `var' `rhsvars' if `varlist'<`cutoff'
+					reg `var' `rhsvars' if `varlist'<`zL'
 					tempname init
 					mat `init'=e(b)
 					forvalues k=1/`=colsof(`init')-1' {
 						loc initials `initials' beta`k' `=`init'[1,`k']'
+						loc beta`k'=`=`init'[1,`k']'
 					}
-					noi nl (`var'= `rhsvars1' {beta0}/(1+{gamma}*(`xvar'>`cutoff'))) if `useobs', initial(beta0 `=_b[_cons]' `initials' gamma 0)
+					gen pred=`beta1'*`xvar'^1+`=_b[_cons]' if `useobs'
+
+					nl (`var'= `rhsvarsnl' {beta0}/(1+{gamma}*`above') ) if `useobs', initial(beta0 `=_b[_cons]' `initials' gamma 0)
 					fvexpand `rhsvars'
 					loc names `names' `=subinstr("`=subinstr("`r(varlist)'","`adjustz'","`varlist'",.)'","1.`above'","above",.)' above _cons
 				}
@@ -495,7 +492,7 @@ program rfbunch, eclass sortpreserve
 		//ESTIMATE ELASTICITIES
 		tempname e
 		if "`tcr'"!="" {
-			mata: e=tcr(`t_tcr',`cutoff',`eta_tcr',`r_tcr',`=eresp',`=shift',st_matrix("`initmat'"))
+			mata: e=tcr(`t_tcr',`cutoff',`eta_tcr',`r_tcr',`=eresp',`shift',st_matrix("`initmat'"))
 			mata: st_matrix("`e'",e)
 			if `e'[1,5]!=0 {
 				noi di as error "Error code `=errorcode' during numeric optimization using tcr(), se help mata optimize"
@@ -645,10 +642,10 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 {
 	max=max(X)
 	shift=init
-	for (i=1;i<=precision;i++) {
+	for (i=2;i<=precision;i++) {
 		v=1
 		while (v>0)	{	
-			shift=shift+1/10^(i-1)
+			shift=shift-1/10^(i-1)
 			data=fill(X,bw,zL,zH,shift,type,fill,cutoff,hole)
 	    
 			xbin=J(rows(data[.,1]),1,1)
@@ -656,11 +653,11 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 			for (p=1; p<=k; p++) xbin=xbin,data[.,1]:^p
 			b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
 			
-			if (type==2) 		v=(BM*bw-polyeval(polyinteg(b,1),max*(1+shift))+polyeval(polyinteg(b,1),zL))
-			else if (type==3) 	v=(BM*bw-polyeval(polyinteg(b,1),max+log(1+shift))+polyeval(polyinteg(b,1),zL))
+			if (type==2) 		v=(BM*bw-polyeval(polyinteg(b,1),max/(1+shift))+polyeval(polyinteg(b,1),zL))
+			else if (type==3) 	v=(BM*bw-polyeval(polyinteg(b,1),max-log(1+shift))+polyeval(polyinteg(b,1),zL))
 			else v=(BM*bw-polyeval(polyinteg(b,1),max)+polyeval(polyinteg(b,1),zL))
 			}
-		shift=shift-1/10^(i-1)
+		shift=shift+1/10^(i-1)
 	}
 
 return(b,shift)
@@ -673,19 +670,19 @@ function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real 
 		if (hole==1) zH=min(select(X,X:>cutoff))
 		if (type<2&hole==0) {
 			bin=ceil((X:-cutoff:-2^-23)/bw):*bw:+cutoff:-bw/2
-			y=(1+(type==1)*shift):*mm_freq(bin)
+			y=mm_freq(bin):/(1+(type==1)*shift)
 		}	
 		else {
-			if (type==3) bin=(X:<=cutoff):*(ceil((X:-cutoff:-2^-23):/bw)*bw:+cutoff:-bw/2) :+ ((X:>cutoff):*(floor((X:-zH:+2^-23):/bw):*bw:+zH:+log(1+shift):+bw/2))
-			else bin=(X:<=cutoff):*(ceil((X:-cutoff:-2^-23):/bw)*bw:+cutoff:-bw/2) :+ (X:>cutoff):*(floor((1+shift):*(X:-zH:+2^-23):/bw):*bw:+zH:*(1+shift):+bw/2)
+			if (type==3) bin=(X:<=cutoff):*(ceil((X:-cutoff:-2^-23):/bw)*bw:+cutoff:-bw/2) :+ ((X:>cutoff):*(floor((X:-zH:+2^-23):/bw):*bw:+zH:-log(1+shift):+bw/2))
+			else bin=(X:<=cutoff):*(ceil((X:-cutoff:-2^-23):/bw)*bw:+cutoff:-bw/2) :+ (X:>cutoff):*(floor(((X:-zH:+2^-23):/(1+shift)):/bw):*bw:+zH:/(1+shift):+bw/2)
 			y=mm_freq(bin)
 		}
 		bin=uniqrows(bin)
 		
 		if (fill==1) {
 			if (type<2) 		fullbin=		((zL:-(ceil((zL-min)/bw)::1):*bw) \ (zH:+(0::floor((max-zH)/bw)):*bw)):+bw/2
-			else if (type==2) 	fullbin=		((zL:-(ceil((zL-min)/bw)::1):*bw) \ ((1+shift)*zH:+(0::floor((1+shift)*(max-zH)/bw)):*bw)):+bw/2
-			else if (type==3) 	fullbin=		((zL:-(ceil((zL-min)/bw)::1):*bw) \ (log(1+shift):+zH:+(0::floor(((max-zH))/bw)):*bw)):+bw/2
+			else if (type==2) 	fullbin=		((zL:-(ceil((zL-min)/bw)::1):*bw) \ (zH:/(1+shift):+(0::floor(((max-zH)/(1+shift))/bw)):*bw)):+bw/2
+			else if (type==3) 	fullbin=		((zL:-(ceil((zL-min)/bw)::1):*bw) \ (-log(1+shift):+zH:+(0::floor(((max-zH))/bw)):*bw)):+bw/2
 			if (rows(y)==rows(fullbin)) {
 				 fully=y
 				}
