@@ -40,12 +40,12 @@ program rfbunch, eclass sortpreserve
 			}	
 		else {
 			foreach pol in `polynomial' {
-				mat `polynomials'=nullmat(`polynomials') \ `pol'	
+				mat `polynomials'=nullmat(`polynomials') \ `pol'
+				loc lastpol=`pol'
 				}
 				if `numpoly'<`numxvars'+1&`numpoly'>1 {
 					forvalues k=1/`=`numxvars'+1-`=rowsof(`polynomials')'' {
-						if `k'>`numyvars'+1 mat `polynomials'=`polynomials' \ 7
-						else mat `polynomials'=`polynomials' \ `pol'
+						mat `polynomials'=`polynomials' \ `lastpol'
 					}
 				}
 			}
@@ -68,10 +68,11 @@ program rfbunch, eclass sortpreserve
 				}
 				foreach xval in `xtype' {
 					mat `xtypes'=nullmat(`xtypes') \ `xval'
+					loc lastxval=`xval'
 				}
 				
 				forvalues k=1/`=`numxvars'-`numxvals'' {
-					mat `xtypes'=nullmat(`xtypes') \ `xval'
+					mat `xtypes'=nullmat(`xtypes') \ `lastxval'
 				}
 			}
 		
@@ -430,9 +431,7 @@ program rfbunch, eclass sortpreserve
 					mat `init'=e(b)
 					forvalues k=1/`=colsof(`init')-1' {
 						loc initials `initials' beta`k' `=`init'[1,`k']'
-						loc beta`k'=`=`init'[1,`k']'
 					}
-					gen pred=`beta1'*`xvar'^1+`=_b[_cons]' if `useobs'
 
 					nl (`var'= `rhsvarsnl' {beta0}/(1+{gamma}*`above') ) if `useobs', initial(beta0 `=_b[_cons]' `initials' gamma 0)
 					fvexpand `rhsvars'
@@ -446,7 +445,7 @@ program rfbunch, eclass sortpreserve
 				
 				if `=`polynomials'[`=`i'+1',1]'>0 mat `f'=`f'[1,`=colsof(`f')'],`f'[1,1..`=`polynomials'[`=`i'+1',1]']
 				else mat `f'=_b[_cons]
-				noi mat li `f'
+
 				mata:mean_nonbunchers=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`zL'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff')-polyeval(polyinteg(st_matrix("`cf'"),1),`zL'))	
 				mata: st_numscalar("mean_nonbunchers",mean_nonbunchers)
 				local colnames: colnames e(b)
