@@ -259,12 +259,14 @@ program rfbunch, eclass sortpreserve
 		mat `cutvals'=1 \ `cutvals'
 		
 		mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`zH',0,`type',0,`cutoff',`hole'))
-		
+		n
 		//Get counterfactual and adjust, if using
 		if inlist("`adjust'","x","y","logx") {
 			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`=`polynomials'[1,1]',`BM',`bw',`type',10,0,`fill',`cutoff',`hole')
 			mata: st_matrix("`b'",shift)
+			noi mat li `b'
 			mata: st_matrix("`adj_table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`cutoff',`=`b'[1,`=colsof(`b')']',`type',0,`cutoff',`hole'))
+			noi mat li `adj_table'
 			mat `cf'=`b'[1,1..`=colsof(`b')-1']
 			mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
 			scalar shift=`b'[1,`=colsof(`b')']

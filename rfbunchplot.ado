@@ -44,12 +44,12 @@ cap prog drop rfbunchplot
 		mat `f'=e(table)
 		svmat `f', names(col)
 	
-		su `e(binname)'
+		noi su `e(binname)'
 		loc xmin=r(min)
 		loc xmax=r(max)
 		su `e(binname)' if `e(binname)'>`e(cutoff)'+1e-23
 		loc minabove=r(min)
-		
+		loc interpolmax=`e(upper_limit)'
 
 		if "`adjust'"!="" {
 			cap confirm matrix e(adj_table)
@@ -57,6 +57,9 @@ cap prog drop rfbunchplot
 				mat `f'=e(adj_table)
 				svmat `f', names(col)
 				if r(max)>`xmax' loc xmax=r(max)
+				su adj_bin
+				loc xmax=r(max)
+				loc interpolmax=max(`e(upper_limit)'+`marginalresponse',`interpolmax')
 			}
 		}
 		
@@ -153,10 +156,9 @@ cap prog drop rfbunchplot
 				cap replace adj_bin=. if !inrange(adj_bin,`xmin',`xmax')
 			}
 
-		//Regular plot
+		//Regular bunching plot
 		if "`namelist'"=="`e(binname)'" {
-
-			loc lines (line `f0' `e(binname)' if `e(binname)'<., color(maroon))
+			loc lines (line `f0' `e(binname)' if `e(binname)'<=`=e(lower_limit)', color(maroon))  (line `f0' `e(binname)' if `e(binname)'>`interpolmax', color(maroon)) (line `f0' `e(binname)' if `e(binname)'>`=e(lower_limit)'&`e(binname)'<=`interpolmax', color(maroon) lpattern(dash))
 			loc background (bar frequency bin if bin<. , color(navy%50) barwidth(`=e(bandwidth)')) 
 			loc ytitle frequency
 			
@@ -171,7 +173,7 @@ cap prog drop rfbunchplot
 			
 		}
 		
-		//alternative outcome/characterize plot
+		//alternative outcome plot
 			else  {
 				if `xtype'==3 {
 					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`e(cutoff)'+`marginalresponse''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`minabove'&`e(binname)'<., color(navy)) (line `f1' `e(binname)' if inrange(`e(binname)',`e(cutoff)',`minabove'), color(navy) lpattern(dash)) 
@@ -180,8 +182,8 @@ cap prog drop rfbunchplot
 				else {
 					cap su adj_bin if adj_bin>`e(cutoff)'
 					cap loc minabove=r(min)
-					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)'&`e(binname)'<., color(maroon)) (line `f0' `e(binname)' if `e(binname)'>=`minabove'&`e(binname)'<., color(maroon))  (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`minabove')&`e(binname)'<., color(maroon) lpattern(dash))  (line `f1' `e(binname)' if `e(binname)'>`e(cutoff)'+`marginalresponse'&`e(binname)'<., color(navy)) (line `f1' `e(binname)' if `e(binname)'>`e(cutoff)'&`e(binname)'<`e(cutoff)'+`marginalresponse', color(navy) lpattern(dash))
-					loc background (scatter `namelist' adj_bin `weight' if !inrange(adj_bin,`e(lower_limit)',`e(upper_limit)')&adj_bin<., color(black) msymbol(circle_hollow)) (scatter `namelist' adj_bin `weight' if inrange(adj_bin,`e(lower_limit)',`e(cutoff)')&`e(binname)'<., color(maroon))
+					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)'&`e(binname)'<., color(maroon)) (line `f0' `e(binname)' if `e(binname)'>=`interpolmax'&`e(binname)'<., color(maroon))  (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`interpolmax')&`e(binname)'<., color(maroon) lpattern(dash))  (line `f1' `e(binname)' if `e(binname)'>`e(cutoff)'+`marginalresponse'&`e(binname)'<., color(navy)) (line `f1' `e(binname)' if `e(binname)'>`e(cutoff)'&`e(binname)'<`e(cutoff)'+`marginalresponse', color(navy) lpattern(dash))
+					loc background (scatter `namelist' bin `weight' if !inrange(adj_bin,`e(lower_limit)',`e(upper_limit)')&adj_bin<., color(black) msymbol(circle_hollow)) (scatter `namelist' bin `weight' if inrange(bin,`e(lower_limit)',`e(cutoff)')&`e(binname)'<., color(maroon))
 				}
 				
 				if "`means'"!="nomeans" {
@@ -235,7 +237,7 @@ cap prog drop rfbunchplot
 				`background' `adjplot' ///
 				`lines'  ///
 				`scatters' ///
-				, xline(`=e(upper_limit)', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) xline(`=e(lower_limit)', lpattern(dash) lcolor(black)) `xlinemarg' xscale(range(`min' `max')) text(`ymax' `xmax' `shift' `number_bunchers' `share_sample' `normalized_bunching' `excess_mass' `marginal_response' `average_response' `total_response' `mean_nonbunchers' `production' `capital' `excess_value' `mean_bunchers' `mean_nonbunchers_cf' `bunchers_diff', placement(swest) justification(left) size(small)) graphregion(fcolor(white) lcolor(white)) plotregion(lcolor(black)) bgcolor(white) ytitle(`ytitle') legend(`labels') xtitle("`=e(binname)'") `graph_opts'
+				, xline(`=e(upper_limit)', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) xline(`=e(lower_limit)', lpattern(dash) lcolor(black)) `xlinemarg' xscale(range(`min' `max')) text(`ymax' `xmax' `shift' `number_bunchers' `share_sample' `normalized_bunching' `excess_mass' `marginal_response' `average_response' `total_response' `mean_nonbunchers' `production' `capital' `excess_value' `mean_bunchers' `mean_nonbunchers_cf' `bunchers_diff', placement(swest) justification(left) size(small)) graphregion(fcolor(white) lcolor(white)) plotregion(lcolor(black)) bgcolor(white) ytitle(`ytitle') legend(`labels') xtitle("`=e(binname)'") xscale(range(`xmin' `xmax')) xlabel(#5) `graph_opts'
 
 
 		restore
