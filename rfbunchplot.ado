@@ -75,7 +75,6 @@ cap prog drop rfbunchplot
 
 		gen above=0
 		predict double `f0', eq(`eq')
-		noi su `f0' `e(binname)' `namelist'
 		if "`xtype'"!=""&"`xtype'"!="3" {
 			if `xtype'==1 {
 				gen double `f1'=`f0'*(1+_b[`namelist':above])
@@ -230,7 +229,7 @@ cap prog drop rfbunchplot
 				su `namelist'
 				loc ymax=r(max)
 				if "`ci'"=="noci" su `=e(binname)'
-				else if "`means'"!="nomeans" su `y'
+				else if "`means'"!="nomeans" su y
 				if r(max)>`ymax'&r(max)<. loc ymax=r(max)
 			}
 			

@@ -421,7 +421,7 @@ program rfbunch, eclass sortpreserve
 						if `k'==1 loc rhsvars c.`xvar'
 						else loc rhsvars `rhsvars'##c.`xvar'
 						if `xtypes'[`i',1]==1 {
-								loc rhsvarsnl `rhsvarsnl' {beta`k'}*`xvar'^`k'*(1+{gamma}*`above')+
+								loc rhsvarsnl `rhsvarsnl' {beta`k'}*`xvar'^`k'+
 						}
 					}
 				}
@@ -435,9 +435,10 @@ program rfbunch, eclass sortpreserve
 					forvalues k=1/`=colsof(`init')-1' {
 						loc initials `initials' beta`k' `=`init'[1,`k']'
 					}
-					nl (`var'= `rhsvarsnl' {beta0}*(1+{gamma}*`above') ) if `useobs', initial(beta0 `=_b[_cons]' `initials' gamma 0)
+					noi nl (`var'= (`rhsvarsnl' {beta0})*(1+{gamma}*`above') ) if `useobs', initial(beta0 `=_b[_cons]' `initials' gamma 0)
+					est sto nl
 					fvexpand `rhsvars'
-					loc names `names' `=subinstr("`=subinstr("`r(varlist)'","`adjustz'","`varlist'",.)'","1.`above'","above",.)' above _cons
+					loc names `names' `=subinstr("`r(varlist)'","`adjustz'","`varlist'",.)' _cons above
 				}
 				else if `xtypes'[`i',1]==2 reg `var' `rhsvars' 1.`above' `localweights'  if `useobs' //assume x0/x1=constant, y in logs
 				else if `xtypes'[`i',1]==3 reg `var' `rhsvars'  `localweights' if `useobs' //characterize, assume x0==x1
@@ -445,8 +446,12 @@ program rfbunch, eclass sortpreserve
 				mat `b'=`b',e(b)
 				mat `f'=e(b)
 				
-				if `=`polynomials'[`=`i'+1',1]'>0 mat `f'=`f'[1,`=colsof(`f')'],`f'[1,1..`=`polynomials'[`=`i'+1',1]']
+				if `=`polynomials'[`=`i'+1',1]'>0 {
+					if `xtypes'[`i',1]!=1 mat `f'=`f'[1,`=colsof(`f')'],`f'[1,1..`=`polynomials'[``i'+1',1]']
+					else mat `f'=`f'[1,`=colsof(`f')-1'],`f'[1,1..`=`polynomials'[`=`i'+1',1]']
+					}
 				else mat `f'=_b[_cons]
+				noi mat li `f'
 
 				mata:mean_nonbunchers=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`zL'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff')-polyeval(polyinteg(st_matrix("`cf'"),1),`zL'))	
 				mata: st_numscalar("mean_nonbunchers",mean_nonbunchers)
