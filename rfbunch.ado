@@ -311,6 +311,7 @@ program rfbunch, eclass sortpreserve
 		else {
 			if "`constant'"!="constant" {
 				mata: eresp=eresp(`B',`cutoff',st_matrix("`cf'"),`bw')
+				mata: st_numscalar("eresp",eresp)
 				if eresp==. {
 					noi di as error 	"No real roots found above the cutoff to the integral of the counterfactual."
 					noi di as error 	"Marginal response and various other parameters cannot be estimated. You could"
@@ -318,7 +319,7 @@ program rfbunch, eclass sortpreserve
 					noi di as error		"specifying the option constant."
 					exit 301
 				}
-				mata: st_numscalar("eresp",eresp)
+				
 				mata: meanbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))/(`bw'*`B')-(`cutoff')
 				mata: st_numscalar("meanbunch",meanbunch)
 				mata: totalresponse=(1/`bw')*(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))-(`cutoff'*`B')
