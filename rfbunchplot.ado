@@ -97,7 +97,7 @@ cap prog drop rfbunchplot
 				gen double `CI_r1'=`f1'+invnormal(0.975)*`error'
 				drop `error'
 			}
-		if "`=e(binname)'"=="`namelist'"|`xtype'==3 loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `e(binname)'<., color(gs8%50))
+		if "`=e(binname)'"=="`namelist'"|"`xtype'"=="3" loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `e(binname)'<., color(gs8%50))
 		else loc ciplot (rarea `CI_l0' `CI_r0' `=e(binname)' if `=e(binname)'<=`=`marginalresponse'+`=e(cutoff)''&`=e(binname)'<., color(gs8%50)) (rarea `CI_l1' `CI_r1' `=e(binname)' if `=e(binname)'<.&inrange(`=e(binname)',`=e(cutoff)',`xmax'), color(gs8%50))	
 		}
 		
