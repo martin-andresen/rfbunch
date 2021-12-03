@@ -435,7 +435,7 @@ program rfbunch, eclass sortpreserve
 					forvalues k=1/`=colsof(`init')-1' {
 						loc initials `initials' beta`k' `=`init'[1,`k']'
 					}
-					noi nl (`var'= (`rhsvarsnl' {beta0})*(1+{gamma}*`above') ) if `useobs', initial(beta0 `=_b[_cons]' `initials' gamma 0)
+					nl (`var'= (`rhsvarsnl' {beta0})*(1+{gamma}*`above') ) if `useobs', initial(beta0 `=_b[_cons]' `initials' gamma 0)
 					est sto nl
 					fvexpand `rhsvars'
 					loc names `names' `=subinstr("`r(varlist)'","`adjustz'","`varlist'",.)' _cons above
@@ -451,7 +451,6 @@ program rfbunch, eclass sortpreserve
 					else mat `f'=`f'[1,`=colsof(`f')-1'],`f'[1,1..`=`polynomials'[`=`i'+1',1]']
 					}
 				else mat `f'=_b[_cons]
-				noi mat li `f'
 
 				mata:mean_nonbunchers=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`zL'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff')-polyeval(polyinteg(st_matrix("`cf'"),1),`zL'))	
 				mata: st_numscalar("mean_nonbunchers",mean_nonbunchers)
