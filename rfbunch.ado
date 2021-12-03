@@ -393,7 +393,7 @@ program rfbunch, eclass sortpreserve
 				gen `adjustz'=`varlist'/(1+`shift'*(`varlist'>`cutoff'))
 				}
 			else if `type'==3 {
-				replace `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + ((`varlist'>`cutoff')*(floor(-log(1+`shift')+(`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'-log(1+`shift')+`bw'/2))
+				replace `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + ((`varlist'>`cutoff')*(floor((`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'-log(1+`shift')+`bw'/2))
 				gen `adjustz'=`varlist'-log(1+`shift')*(`varlist'>`cutoff')				
 				}
 			egen `adjustbin'=group(`bin')
