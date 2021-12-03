@@ -102,11 +102,19 @@ cap prog drop rfbunchdata
 		gen equitycost1=(1-debtratio1)*`r'*K1
 		gen equitycostK=(1-debtratioK)*`r'*KK
 		
+		gen equity0=(1-debtratio0)*K0
+		gen equity1=(1-debtratio1)*K1
+		gen equityK=(1-debtratioK)*KK
+		
+		gen debt0=debtratio0*K0
+		gen debt1=debtratio1*K1
+		gen debtK=debtratioK*KK
+		
 		gen y0=((`e'+1)/`e')*`Q0'^(-`e')*(1-`t')^(`e')*alpha
 		gen y1=((`e'+1)/`e')*`Q1'^(-`e')*(1-(1-`eta')*`t')^(`e')*alpha
 		gen yK=((`e'+1)/`e')*alpha^(1/(`e'+1))*KK^(`e'/(`e'+1))
 		
-		foreach var in debtratio equitycost K y {
+		foreach var in debtratio equitycost K y equity debt {
 			gen `var'=`var'K if KK!=.
 			replace `var'=`var'0 if alpha<`alphaL'
 			replace `var'=`var'1 if alpha>`alphaH'
@@ -124,7 +132,7 @@ cap prog drop rfbunchdata
 			replace debtcost=debtcost-runiform(0,`=0.2*`cut'') if KK!=.
 		}
 
-		if "`drop'"!="nodrop" drop KK Pi1 Pi0 alpha buncher debtcost0 debtcost1 debtratio1 debtratio0 Pistar equitycost1 equitycost0 equitycostK debtratioK y0 y1 yK K1 K0 tcrcost
+		if "`drop'"!="nodrop" drop KK Pi1 Pi0 alpha buncher debtcost0 debtcost1 debtratio1 debtratio0 Pistar equitycost1 equitycost0 equitycostK debtratioK y0 y1 yK K1 K0 tcrcost equity0 equity1 equityK debt0 debt1 debtK
 		
 		return scalar marginalresp=`=(`mu'/(`mu'+1))*(1-`t')^(`e'-`mu')*`Q0'^(-(`e'+1))*`r'^(`mu'+1)*`alphaH'-`cut''
 		return scalar shift=`Q0'^(-`e'-1)*`Q1'^(`e'+1)*(1-`t')^(`e'-`mu')*(1-(1-`eta')*`t')^(-`e'-1)
