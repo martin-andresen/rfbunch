@@ -180,10 +180,12 @@ cap prog drop rfbunchplot
 					loc background (scatter `namelist' bin `weight' if !inrange(bin,`=e(lower_limit)',`e(upper_limit)')&bin<., color(black) msymbol(circle_hollow)) (scatter `namelist' bin `weight' if inrange(bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
 				}
 				else {
-					cap su adj_bin if adj_bin>`e(cutoff)'
-					cap loc minabove=r(min)
-					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)'&`e(binname)'<., color(maroon)) (line `f0' `e(binname)' if `e(binname)'>=`interpolmax'&`e(binname)'<., color(maroon))  (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`interpolmax')&`e(binname)'<., color(maroon) lpattern(dash))  (line `f1' `e(binname)' if `e(binname)'>`e(cutoff)'+`marginalresponse'&`e(binname)'<., color(navy)) (line `f1' `e(binname)' if `e(binname)'>`e(cutoff)'&`e(binname)'<`e(cutoff)'+`marginalresponse', color(navy) lpattern(dash))
-					loc background (scatter `namelist' bin `weight' if !inrange(adj_bin,`e(lower_limit)',`e(upper_limit)')&adj_bin<., color(black) msymbol(circle_hollow)) (scatter `namelist' bin `weight' if inrange(bin,`e(lower_limit)',`e(cutoff)')&`e(binname)'<., color(maroon))
+					if "`adjust'"!="" {
+						cap su adj_bin if adj_bin>`e(cutoff)'
+						cap loc minabove=r(min)
+					}
+					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)'&`e(binname)'<., color(navy)) (line `f0' `e(binname)' if `e(binname)'>=`interpolmax'&`e(binname)'<., color(navy))  (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`interpolmax')&`e(binname)'<., color(navy) lpattern(dash))  (line `f1' `e(binname)' if `e(binname)'>`e(cutoff)'+`marginalresponse'&`e(binname)'<., color(maroon)) (line `f1' `e(binname)' if `e(binname)'>`e(cutoff)'&`e(binname)'<`e(cutoff)'+`marginalresponse', color(maroon) lpattern(dash))
+					loc background (scatter `namelist' bin `weight' if !inrange(bin,`e(lower_limit)',`e(upper_limit)')&bin<., color(black) msymbol(circle_hollow)) (scatter `namelist' bin `weight' if inrange(bin,`e(lower_limit)',`e(cutoff)')&`e(binname)'<., color(maroon))
 				}
 				
 				if "`means'"!="nomeans" {
@@ -210,8 +212,14 @@ cap prog drop rfbunchplot
 				}
 			
 			if "`ci'"!="noci"{
-				if `xtype'==3 loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "polynomial fit") label(8 "estimated means") order(3 5 8 1) cols(2)
-				else loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "polynomial fit") label(10 "estimated means") order(3 5 10 1) cols(2)
+				if "`adjust'"=="" {
+					if `xtype'==3 loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "polynomial fit") label(8 "estimated means") order(3 5 8 1) cols(2)
+					else loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "polynomial fit") label(10 "estimated means") order(3 5 10 1) cols(2)
+				}
+			else {
+					if `xtype'==3 loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "adjusted") label(8 "polynomial fit") label(9 "estimated means") order(3 5 8 10 1) cols(3)
+					else loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "adjusted") label(6 "polynomial fit") label(12 "estimated means") order(3 5 6 12 1) holes(3) cols(3)
+				}
 			} 
 			else {
 				if `xtype'==3 loc labels label(1 "mean in bin") label(3 "polynomial fit") label(6 "estimated means") order(1 3 6) cols(3)
