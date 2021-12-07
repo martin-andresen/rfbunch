@@ -12,13 +12,6 @@ cap prog drop rfbunchplot
 			exit
 			}
 		
-		if "`means'"!="nomeans"&"`namelist'"!="`e(binname)'" {
-			cap confirm number `=_b[`namelist'_means:mean_bunchers]'
-			if _rc!=0 {
-				noi di as text "Note: No means for bunchers and non-bunchers found in estimates. These are not plotted."
-				loc means nomeans
-			}
-		}
 		if "`weight'"!="" loc weight [aw=frequency]
 		preserve
 		if "`namelist'"=="" loc namelist `=e(binname)'
@@ -32,6 +25,14 @@ cap prog drop rfbunchplot
 			tempname xtypes
 			mat `xtypes'=e(xtypes)
 			loc xtype=`xtypes'["`namelist'",1]	
+		}
+		
+		if "`means'"!="nomeans"&"`namelist'"!="`e(binname)'" {
+			cap confirm number `=_b[`namelist'_means:mean_bunchers]'
+			if _rc!=0 {
+				noi di as text "Note: No means for bunchers and non-bunchers found in estimates. These are not plotted."
+				loc means nomeans
+			}
 		}
 		
 		cap confirm matrix e(V)
