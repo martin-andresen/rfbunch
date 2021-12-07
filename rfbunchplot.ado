@@ -11,7 +11,14 @@ cap prog drop rfbunchplot
 			noi di in red "Estimates in memory not created by rfbunch"
 			exit
 			}
-			
+		
+		if "`means'"!="nomeans"&"`namelist'"!="`e(binname)'" {
+			cap confirm number _b[`namelist':mean_bunchers]
+			if _rc!=0 {
+				noi di as text "Note: No means for bunchers and non-bunchers found in estimates. These are not plotted."
+				loc means nomeans
+			}
+		}
 		if "`weight'"!="" loc weight [aw=frequency]
 		preserve
 		if "`namelist'"=="" loc namelist `=e(binname)'
@@ -36,8 +43,8 @@ cap prog drop rfbunchplot
 		
 		clear
 		
-		cap scalar b=_b[bunching:marginal_response]
-		if _rc==0 loc marginalresponse=`=_b[bunching:marginal_response]'
+		cap confirm number _b[bunching:marginal_response]
+		if _rc==0 loc marginalresponse=_b[bunching:marginal_response]
 		else loc marginalresponse=0
 		
 		tempvar f0 f1 CI_l0 CI_r0 CI_l1 CI_r1 error bin f
@@ -176,7 +183,7 @@ cap prog drop rfbunchplot
 		//alternative outcome plot
 			else  {
 				if `xtype'==3 {
-					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(maroon)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`=`e(cutoff)'+`marginalresponse''), color(maroon) lpattern(dash)) (line `f1' `e(binname)' if `e(binname)'>=`minabove'&`e(binname)'<., color(navy)) (line `f1' `e(binname)' if inrange(`e(binname)',`e(cutoff)',`minabove'), color(navy) lpattern(dash)) 
+					loc lines (line `f0' `e(binname)' if `e(binname)'<`e(lower_limit)', color(navy)) (line `f0' `e(binname)' if inrange(`e(binname)',`e(lower_limit)',`interpolmax'), color(navy) lpattern(dash)) (line `f0' `e(binname)' if `e(binname)'>`interpolmax', color(navy))
 					loc background (scatter `namelist' bin `weight' if !inrange(bin,`=e(lower_limit)',`e(upper_limit)')&bin<., color(black) msymbol(circle_hollow)) (scatter `namelist' bin `weight' if inrange(bin,`e(lower_limit)',`e(cutoff)'), color(maroon))
 				}
 				else {
