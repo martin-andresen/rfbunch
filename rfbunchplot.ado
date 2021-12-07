@@ -13,7 +13,7 @@ cap prog drop rfbunchplot
 			}
 		
 		if "`means'"!="nomeans"&"`namelist'"!="`e(binname)'" {
-			cap confirm number _b[`namelist':mean_bunchers]
+			cap confirm number _b[`namelist'_means:mean_bunchers]
 			if _rc!=0 {
 				noi di as text "Note: No means for bunchers and non-bunchers found in estimates. These are not plotted."
 				loc means nomeans
