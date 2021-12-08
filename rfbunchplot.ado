@@ -226,7 +226,7 @@ cap prog drop rfbunchplot
 				}
 			else {
 					if `xtype'==3 loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "adjusted") label(8 "polynomial fit") label(9 "estimated means") order(3 5 8 10 1) cols(3)
-					else loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "adjusted") label(6 "polynomial fit") label(13 "estimated means") order(3 5 6 13 1) holes(3) cols(3)
+					else loc labels label(1 "95% CI") label(3 "mean in bin") label(5 "adjusted") label(6 "polynomial fit") label(11 "estimated means") order(3 5 6 11 1) holes(3) cols(3)
 				}
 			} 
 			else {
