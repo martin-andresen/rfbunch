@@ -264,7 +264,7 @@ program rfbunch, eclass sortpreserve
 		if inlist("`adjust'","x","y","logx") {
 			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`=`polynomials'[1,1]',`BM',`bw',`type',10,0,`fill',`cutoff',`hole')
 			mata: st_matrix("`b'",shift)
-			mata: st_matrix("`adj_table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`cutoff',`=`b'[1,`=colsof(`b')']',`type',0,`cutoff',`hole'))
+			mata: st_matrix("`adj_table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`minabove',`=`b'[1,`=colsof(`b')']',`type',0,`cutoff',`hole'))
 			mat `cf'=`b'[1,1..`=colsof(`b')-1']
 			mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
 			local shift=`b'[1,`=colsof(`b')']
