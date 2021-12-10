@@ -259,7 +259,7 @@ program rfbunch, eclass sortpreserve
 		loc coleq `coleq' counterfactual_frequency
 		mat `cutvals'=1 \ `cutvals'
 		
-		mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`zH',0,`type',0,`cutoff',`hole'))
+		mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`minabove',0,`type',0,`cutoff',`hole'))
 		//Get counterfactual and adjust, if using
 		if inlist("`adjust'","x","y","logx") {
 			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`=`polynomials'[1,1]',`BM',`bw',`type',10,0,`fill',`cutoff',`hole')
