@@ -446,13 +446,11 @@ program rfbunch, eclass sortpreserve
 				
 				mat `b'=`b',e(b)
 				mat `f'=e(b)
-				
-				if `=`polynomials'[`=`i'+1',1]'>0 {
-					if `xtypes'[`i',1]!=1 mat `f'=`f'[1,`=colsof(`f')'],`f'[1,1..`=`polynomials'[``i'+1',1]']
+				if `=`polynomials'[`=`i'+1',1]'>0  {
+					if `xtypes'[`i',1]!=1 mat `f'=`f'[1,`=colsof(`f')'],`f'[1,1..`=`polynomials'[`=`i'+1',1]']
 					else mat `f'=`f'[1,`=colsof(`f')-1'],`f'[1,1..`=`polynomials'[`=`i'+1',1]']
 					}
 				else mat `f'=_b[_cons]
-
 				mata:mean_nonbunchers=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`zL'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff')-polyeval(polyinteg(st_matrix("`cf'"),1),`zL'))	
 				mata: st_numscalar("mean_nonbunchers",mean_nonbunchers)
 				local colnames: colnames e(b)
@@ -468,7 +466,7 @@ program rfbunch, eclass sortpreserve
 				
 				loc names `names' excess_value mean_nonbunchers average_prediction_error
 				loc coleq `coleq' `var'_means `var'_means `var'_means
-				if `B'>0&"`placebo'"=="" {
+				if `B'>0&"`placebo'"==""  {
 					mata: mean_counterfactual=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff'+`=eresp')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff'+`=eresp')-polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff'))
 					mata: st_numscalar("mean_b_cf",mean_counterfactual)
 					mat `b'=`b',`=`excess'/`B'+mean_nonbunchers',mean_b_cf,`=`excess'/`B'+mean_nonbunchers-mean_b_cf'
