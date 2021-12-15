@@ -162,6 +162,8 @@ cap prog drop rfbunchplot
 				replace `e(binname)'=. if !inrange(`=e(binname)',`xmin',`xmax')
 				replace bin=. if !inrange(bin,`xmin',`xmax')
 				cap replace adj_bin=. if !inrange(adj_bin,`xmin',`xmax')
+				cap replace adj_`namelist'=. if !inrange(adj_bin,`xmin',`xmax')
+				cap replace `namelist'=. if !inrange(adj_bin,`xmin',`xmax')
 			}
 
 		//Regular bunching plot
