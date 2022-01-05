@@ -231,7 +231,7 @@ program rfbunch, eclass sortpreserve
 		loc N=_N
 		count if `varlist'>`zL'
 		loc BM=r(N)
-		count if `varlist'>`zL'&`varlist'<=`zH'
+		count if `varlist'>`zL'&`varlist'<=`cutoff'
 		loc Bunchmass=r(N)
 		
 		loc colfreq `varlist' frequency
