@@ -88,14 +88,13 @@ cap prog drop rfbunchplot
 			if "`means'"!="nomeans" {
 				mat `meanmat'=e(b)
 				mat `meanmat'=`meanmat'[1,"`namelist'_effects:"]'
+				if `xtype'==1|`xtype'==2 loc `meanmat'=`meanmat'[2..5,1]
 				svmat `meanmat'
 				loc ytitle `namelist'
-				if `xtype'==1|`xtype'==2 loc add=1
-				else loc add=0
-				gen `x'=_b[bunching:mean_h0L] in `=1+`add''
-				replace `x'=_b[bunching:mean_h0H] in `=2+`add''
-				replace `x'=`zL'+(`=e(cutoff)'-`zL')*0.9 in `=3+`add''
-				replace `x'=`zH'-(`zH'-`=e(cutoff)')*0.9 in `4+`add''
+				gen `x'=_b[bunching:mean_h0L] in 1
+				replace `x'=_b[bunching:mean_h0H] in 2
+				replace `x'=`zL'+(`=e(cutoff)'-`zL')*0.9 in 3
+				replace `x'=`zH'-(`zH'-`=e(cutoff)')*0.9 in 4
 				loc meanscatter (scatter `meanmat'1 `x', color(dkgreen) msymbol(circle))
 				loc ++plus
 				loc meanlabno=3
