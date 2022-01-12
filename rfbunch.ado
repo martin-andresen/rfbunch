@@ -16,6 +16,7 @@ program rfbunch, eclass sortpreserve
 	constant ///
 	placebo ///
 	xtype(numlist <=3 >=0 integer) ///
+	precision(integer 3) ///
 	]
 	
 	quietly {
@@ -284,7 +285,7 @@ program rfbunch, eclass sortpreserve
 		
 		//Get counterfactual by adjusting values above z* until missing mass=excess mass
 		if inlist("`adjust'","x","y","logx") {
-			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`=`polynomials'[1,1]',`BM',`bw',`type',10,0,`fill',`cutoff',`hole')
+			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`=`polynomials'[1,1]',`BM',`bw',`type',`precision',0,`fill',`cutoff',`hole')
 			mata: st_matrix("`b'",shift)
 			mata: st_matrix("`adj_table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`minabove',`=`b'[1,`=colsof(`b')']',`type',0,`cutoff',`hole'))
 			mata: h0=shift[1..cols(shift)-1]
@@ -297,7 +298,7 @@ program rfbunch, eclass sortpreserve
 		
 		//get counterfactual by iteratively adjusting upper bound zH untill missing mass==excess mass
 		else if "`H'"==" iterate" {
-			mata: zH=iterate(st_data(.,"`varlist'"),`bw',`fill',`zL',`minabove',`cutoff',1,`=`polynomials'[1,1]',10,`BM')
+			mata: zH=iterate(st_data(.,"`varlist'"),`bw',`fill',`zL',`minabove',`cutoff',1,`=`polynomials'[1,1]',`precision',`BM')
 			mata: st_matrix("`b'",zH)
 			mata: h0=zH[1..cols(zH)-1]
 			mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
@@ -608,7 +609,7 @@ program rfbunch, eclass sortpreserve
 
 		mat colnames `b'=`names'
 		mat coleq `b'=`coleq'
-		noi mat li `b'
+
 		eret post `b', esample(`touse') obs(`N')
 		ereturn matrix polynomial=`polynomials'
 		ereturn scalar bandwidth=`bw'
@@ -741,22 +742,20 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 	else {
 		neg=1
 	}
-	for (i=2;i<=precision;i++) {
-		while (v*neg>0)	{	
-			shift=shift-neg/10^(i-1)
-			data=fill(X,bw,zL,zH,shift,type,fill,cutoff,hole)
-	    
-			xbin=J(rows(data[.,1]),1,1)
-			
-			for (p=1; p<=k; p++) xbin=xbin,data[.,1]:^p
-			b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
-			
-			if (type==2) 		v=(BM*bw-polyeval(polyinteg(b,1),max/(1+shift))+polyeval(polyinteg(b,1),zL))
-			else if (type==3) 	v=(BM*bw-polyeval(polyinteg(b,1),max-log(1+shift))+polyeval(polyinteg(b,1),zL))
-			else v=(BM*bw-polyeval(polyinteg(b,1),max)+polyeval(polyinteg(b,1),zL))
-			}
-		shift=shift+neg/10^(i-1)
-	}
+	//for (i=2;i<=precision;i++) {
+	while (v*neg>0)	{	
+		data=fill(X,bw,zL,zH,shift,type,fill,cutoff,hole)
+		xbin=J(rows(data[.,1]),1,1)
+		for (p=1; p<=k; p++) xbin=xbin,data[.,1]:^p
+		b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
+		
+		if (type==2) 		v=(BM*bw-polyeval(polyinteg(b,1),max/(1+shift))+polyeval(polyinteg(b,1),zL))
+		else if (type==3) 	v=(BM*bw-polyeval(polyinteg(b,1),max-log(1+shift))+polyeval(polyinteg(b,1),zL))
+		else v=(BM*bw-polyeval(polyinteg(b,1),max)+polyeval(polyinteg(b,1),zL))
+		shift=shift-neg/10^precision
+		}
+	
+	//}
 
 return(b,shift)
 }
@@ -764,7 +763,7 @@ return(b,shift)
 function iterate(real matrix X, real scalar bw, real scalar fill, real scalar zL, real scalar zH, real scalar cutoff, real scalar hole, real scalar k,real scalar precision, real scalar BM) 
 {
 		max=max(X)
-		for (i=2;i<=precision;i++) {
+		//for (i=2;i<=precision;i++) {
 			v=1
 			while ((v>0)&(zH<max)) {
 				data=fill(select(X,(X:<=zL) :| (X:>zH)),bw,zL,zH,0,0,fill,cutoff,hole)
@@ -773,10 +772,9 @@ function iterate(real matrix X, real scalar bw, real scalar fill, real scalar zL
 				for (p=1; p<=k; p++) xbin=xbin,data[.,1]:^p
 				b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
 				v=(BM*bw-polyeval(polyinteg(b,1),max)+polyeval(polyinteg(b,1),zL))
-				zH=zH+cutoff/10^(i-1)
+				zH=zH+cutoff/10^precision
 			}
-		zH=zH-cutoff/10^(i-1)
-		}
+		//}
 		return(b,zH)
 }
 
