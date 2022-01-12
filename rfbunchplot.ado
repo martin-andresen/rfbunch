@@ -98,7 +98,6 @@ cap prog drop rfbunchplot
 			}
 			if "`namelist'"=="`e(binname)'" loc adj (bar adj_freq  adj_bin, color(maroon%50) barwidth(`=e(bandwidth)') base(0))
 			else loc adj (scatter adj_`namelist' adj_bin, color(maroon) msymbol(circle_hollow))
-			noi su adj_bin
 		}
 		
 		if "`e(binname)'"!="`namelist'" {
@@ -137,7 +136,7 @@ cap prog drop rfbunchplot
 		else loc ytitle frequency
 		
 		if "`namelist'"=="`e(binname)'" {
-			loc background (bar freq `e(binname)', barwidth(`=e(bandwidth)') color(navy) base(0))
+			loc background (bar freq `e(binname)', barwidth(`=e(bandwidth)') color(navy%50) base(0))
 			loc lines (line `h0' `e(binname)' if `e(binname)'<=`zL', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zH', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zL'&`e(binname)'<=`zH', color(maroon) lpattern(dash))
 			loc labels label(1 "observed") label(`=2+`plus'' "estimated counterfactual") `cilab' order(1 `=2+`plus'' `cilabno') cols(`=2+`plus'')
 		}
