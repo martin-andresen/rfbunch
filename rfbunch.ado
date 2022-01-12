@@ -1,22 +1,21 @@
-*! rfbunch version date 20211130
+*! rfbunch version date 20220107
 * Author: Martin Eckhoff Andresen
 * This program is part of the rfbunch package.
 cap prog drop rfbunch
 program rfbunch, eclass sortpreserve
 	syntax varlist(min=1) [if] [in],  CUToff(real) bw(real) [ ///
-	LIMits(numlist min=1 max=2 >=0) ///
+	LIMits(string) ///
 	notch(numlist min=2 max=3 >=0) ///
 	kink(numlist min=2 max=2 >0) ///
-	tcr(numlist min=3 max=3) ///
 	init(numlist min=1 max=2 >0) ///
 	POLynomial(numlist min=0 integer >=0) ///
 	localbw(string) ///
 	localkernel(string) ///
 	ADJust(string) ///
-	nofill ///
+	fill ///
 	constant ///
 	placebo ///
-	xtype(numlist <=3 >=0) ///
+	xtype(numlist <=3 >=0 integer) ///
 	]
 	
 	quietly {
@@ -29,7 +28,7 @@ program rfbunch, eclass sortpreserve
 		loc numpoly: word count `polynomial'
 		
 		if `numpoly'>`numxvars'+1 {
-			noi di as error "Specify no more numbers than the number of variables in polynomial()."
+			noi di as error "Specify no more numbers than the number of variables in xvars()+1."
 			exit 301
 		}
 		if `numpoly'==0 {
@@ -63,7 +62,7 @@ program rfbunch, eclass sortpreserve
 			else {
 				local numxvals: word count `xtype'
 				if `numxvals'>`numxvars' {
-					noi di as error "Specify no more numbers than the number of x variables in numlist xtypes()."
+					noi di as error "Specify no more numbers in xtype() than the number of x variables in numlist xtypes()."
 					exit 301
 				}
 				foreach xval in `xtype' {
@@ -80,19 +79,49 @@ program rfbunch, eclass sortpreserve
 		mat colnames `xtypes'=xtypes
 		}
 
+		//limits option
+		if "`limits'"!="" {
+			loc numvalues: word count `limits'
+			if `numvalues'>2 {
+				noi di in red "Limits() can only contain one or two entries, either numbers or iterate".
+				exit 301
+			}
+			gettoken L H: limits
+			capture confirm integer number `L'
+			if _rc!=0 {
+				noi di in red "Limits() can only contain one or two entries, either numbers or iterate".
+				exit 301
+			}
+			capture confirm integer number `H'
+			if _rc!=0&"`H'"!=" iterate"&"`H'"!="" {
+				noi di in red "Limits() can only contain one or two entries, either numbers or iterate".
+				exit 301
+			}
+			if "`H'"=="" loc H=0
+			if "`H'"==" iterate"&"`adjust'"!="" {
+				noi di in red "Option adjust() cannot be combined with iterate in limits."
+				exit 301
+			}
+			
+		}
+		else {
+			loc L=1
+			loc H=0
+		}
 		
-
+		
+		loc zL=`cutoff'-`L'*`bw'
+		if "`H'"!=" iterate" loc zH=`cutoff'+`H'*`bw'
 		
 		cap which moremata.hlp
-		
 		if _rc!=0 {
 			noi di in red "moremata needed. Install using "ssc install moremata"".
 			exit 301
 			}
 		
 		if "`adjust'"!="" {
-			if !inlist("`adjust'","y","x","none","logx") {
-				noi di in red "Option adjust can only take values y (Chetty et al.), x and logx (Andresen and Thorvaldsen) or none"
+			if !inlist("`adjust'","y","x","logx") {
+				noi di in red "Option adjust can only take values y (Chetty et al.), x and logx (Andresen and Thorvaldsen)"
 				exit 301
 				}
 			}
@@ -101,20 +130,8 @@ program rfbunch, eclass sortpreserve
 		else if "`adjust'"=="y" loc type=1
 		else loc type=0
 		
-		if "`limits'"!="" {
-			gettoken L H: limits
-			if "`H'"=="" loc H=0
-		}
-		else {
-			loc L=1
-			loc H=0
-		}
-		
-		loc zL=`cutoff'-`L'*`bw'
-		loc zH=`cutoff'+`H'*`bw'
-		
-		if "`fill'"=="nofill" loc fill=0
-		else loc fill=1
+		if "`fill'"=="fill" loc fill=1
+		else loc fill=0
 		
 		if "`localbw'"!="" {
 			if "`localbw'"!="rdbw" {
@@ -209,6 +226,7 @@ program rfbunch, eclass sortpreserve
 			}
 		}
 		
+		//check if there are people in either side
 		count if `varlist'<`cutoff'
 		if r(N)==0 {
 			noi di as error "No individuals in sample allocates below cutoff."
@@ -220,6 +238,7 @@ program rfbunch, eclass sortpreserve
 			noi di as error "No individuals in sample allocates above cutoff."
 			exit 301
 			}
+		
 		
 		tempvar resid freq0 freq touse useobs bin
 		tempname table cutvals cf b adj_table obsbins shiftmat
@@ -235,7 +254,6 @@ program rfbunch, eclass sortpreserve
 		loc Bunchmass=r(N)
 		
 		loc colfreq `varlist' frequency
-		gen `useobs' = `varlist'<=`zL'|`varlist'>`zH'
 		
 		su `varlist' if `varlist'>`cutoff'
 		if ((r(min)>`cutoff'+`bw')) {
@@ -244,12 +262,12 @@ program rfbunch, eclass sortpreserve
 			loc minabove=r(min)
 		} 
 		else loc hole=0
-		if "`adjust'"!=""|`hole'==1 {
+		if "`adjust'"!="x"|`hole'==1|"`H'"==" iterate" {
 			loc minabove=r(min)
 		}
 		else loc minabove=`cutoff'
 		
-		forvalues i=1/`=`polynomials'[1,1]' {
+		forvalues i=1/`=`polynomials'[1,1]' { 
 			if "`rhsvars'"=="" loc rhsvars  c.`varlist'
 			else loc rhsvars `rhsvars'##c.`varlist'
 			mat `cutvals'=nullmat(`cutvals') \ `cutoff'^`i'
@@ -259,43 +277,70 @@ program rfbunch, eclass sortpreserve
 		loc coleq `coleq' counterfactual_frequency
 		mat `cutvals'=1 \ `cutvals'
 		
-		mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`minabove',0,`type',0,`cutoff',`hole'))
-		//Get counterfactual and adjust, if using
+		fvexpand `rhsvars'
+		loc names `r(varlist)' _cons
+		
+		if "`zH'"!="" gen `useobs' = `varlist'<=`zL'|`varlist'>`zH'
+		
+		//Get counterfactual by adjusting values above z* until missing mass=excess mass
 		if inlist("`adjust'","x","y","logx") {
 			mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`=`polynomials'[1,1]',`BM',`bw',`type',10,0,`fill',`cutoff',`hole')
 			mata: st_matrix("`b'",shift)
 			mata: st_matrix("`adj_table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`minabove',`=`b'[1,`=colsof(`b')']',`type',0,`cutoff',`hole'))
-			mat `cf'=`b'[1,1..`=colsof(`b')-1']
+			mata: h0=shift[1..cols(shift)-1]
 			mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
 			local shift=`b'[1,`=colsof(`b')']
-			fvexpand `rhsvars'
-			loc names `r(varlist)' _cons shift
+			loc names `names' shift
 			loc coleq `coleq' bunching
 			loc adjnames adj_bin adj_freq
 			}
+		
+		//get counterfactual by iteratively adjusting upper bound zH untill missing mass==excess mass
+		else if "`H'"==" iterate" {
+			mata: zH=iterate(st_data(.,"`varlist'"),`bw',`fill',`zL',`minabove',`cutoff',1,`=`polynomials'[1,1]',10,`BM')
+			mata: st_matrix("`b'",zH)
+			mata: h0=zH[1..cols(zH)-1]
+			mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
+			local zH=`b'[1,`=colsof(`b')']
+			if r(N)<=1 {
+				noi di in red "Iterative procedure to find upper bound did not converge before reaching the maximum of z in data."
+				exit 301
+			}
+			loc names `names' upper_bound
+			loc coleq `coleq' bunching
+			loc hole=1
+			loc zH=`cutoff'+ceil((`zH'-`cutoff')/`bw')*`bw'
+			su `varlist' if `varlist'>`zH'
+			loc minabove=r(min)
+		}
+		
+		//straightforward with no adjustment
 		else {
 			mata: data=fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',0,0,`fill',`cutoff',`hole')
 			mata: xbin=J(rows(data[.,1]),1,1)
 			mata: for (p=1; p<=`=`polynomials'[1,1]'; p++) xbin=xbin,data[.,1]:^p
-			mata: b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
-			mata: st_matrix("`b'",b)
-			mat `cf'=`b'
+			mata:h0=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
+			mata: st_matrix("`b'",h0)
 			mat `b'=`b'[1,2..`=colsof(`b')'],`b'[1,1]
-			fvexpand `rhsvars'
-			loc names `r(varlist)' _cons
 			local shift=0
 		}
 		
-		tempname freq0b freq0tau
-		mata: st_matrix("`freq0b'",(polyeval(polyinteg(st_matrix("`cf'"),1),`zH')-polyeval(polyinteg(st_matrix("`cf'"),1),`zL'))/`bw')
-		mata: st_matrix("`freq0tau'",(polyeval(st_matrix("`cf'"),`cutoff')))
-		loc B=`=`Bunchmass'-`freq0b'[1,1]'
-		mat `b'=`b',`B',`=`B'/`N'',`=`B'/`freq0b'[1,1]',`=`B'/`freq0tau'[1,1]' //Number of bunchers, bunchers share of sample, normalized bunching, excess mass
-		loc coleq `coleq' bunching bunching bunching bunching
-		loc names `names' number_bunchers share_sample normalized_bunching excess_mass 
+		mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`cutoff',0,`type',0,`cutoff',0))
+		mata: st_numscalar("maniprangecf",(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL'))/`bw')
+		mata: st_numscalar("excesscf",(polyeval(polyinteg(h0,1),`cutoff')-polyeval(polyinteg(h0,1),`zL'))/`bw')
+		mata: st_numscalar("misscf",(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`cutoff'))/`bw')
+		mata: st_numscalar("h0tau",(polyeval(h0,`cutoff')))
+
+		loc B=`Bunchmass'-excesscf
+		loc fs=`B'/maniprangecf
+		loc fs0=`B'/(excesscf+`B')
+		loc fs1=`B'/misscf
+		mat `b'=`b',`B',`=`B'/`N'',`fs',`fs0',`fs1' //Number of bunchers, bunchers share of sample, normalized bunching, B relative to counterfanctual in missing region, B relative to counterfactual in excess regione
+		loc coleq `coleq' bunching bunching bunching bunching bunching
+		loc names `names' number_bunchers share_sample share_manipulationregion share_excessregion share_missregion 
 		
 		if "`constant'"!="constant" {
-			mata: meannonbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((0,st_matrix("`cf'")),1),`zL'))/(polyeval(polyinteg((st_matrix("`cf'")),1),`cutoff') -polyeval(polyinteg((st_matrix("`cf'")),1),`zL'))
+			mata: meannonbunch=(polyeval(polyinteg((0,h0),1),`cutoff') -polyeval(polyinteg((0,h0),1),`zL'))/(polyeval(polyinteg(h0,1),`cutoff') -polyeval(polyinteg(h0,1),`zL'))
 			mata: st_numscalar("meannonbunch",meannonbunch)
 			}
 		else scalar meannonbunch=(`cutoff'-`zL')/2
@@ -305,12 +350,11 @@ program rfbunch, eclass sortpreserve
 			mat `b'=`b',meannonbunch
 			loc coleq `coleq' bunching
 			loc names `names' mean_nonbunchers
-			
 			}
 			
 		else {
 			if "`constant'"!="constant" {
-				mata: eresp=eresp(`B',`cutoff',st_matrix("`cf'"),`bw')
+				mata: eresp=eresp(`B',`cutoff',h0,`bw')
 				mata: st_numscalar("eresp",eresp)
 				if eresp==. {
 					noi di as error 	"No real roots found above the cutoff to the integral of the counterfactual."
@@ -320,25 +364,24 @@ program rfbunch, eclass sortpreserve
 					exit 301
 				}
 				
-				mata: meanbunch=(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))/(`bw'*`B')-(`cutoff')
-				mata: st_numscalar("meanbunch",meanbunch)
-				mata: totalresponse=(1/`bw')*(polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'+eresp) -polyeval(polyinteg((0,st_matrix("`cf'")),1),`cutoff'))-(`cutoff'*`B')
+				mata: meanh0L=(polyeval(polyinteg((0,h0),1),`cutoff') -polyeval(polyinteg((0,h0),1),`zL'))/(polyeval(polyinteg(h0,1),`cutoff') -polyeval(polyinteg(h0,1),`zL'))
+				mata: meanh0H=(polyeval(polyinteg((0,h0),1),`zH') -polyeval(polyinteg((0,h0),1),`cutoff'))/(polyeval(polyinteg(h0,1),`zH') -polyeval(polyinteg(h0,1),`cutoff'))
+				mata: st_numscalar("meanh0L",meanh0L)
+				mata: st_numscalar("meanh0H",meanh0H)
+				mata: totalresponse=(1/`bw')*(polyeval(polyinteg((0,h0),1),`cutoff'+eresp) -polyeval(polyinteg((0,h0),1),`cutoff'))-(`cutoff'*`B')
 				mata: st_numscalar("totalresponse",totalresponse)
 				}
 			else {
 				tempname predcut
-				mat `predcut'=`cf'*`cutvals'
-				scalar eresp=(`bw'*`B')/`predcut'[1,1]
-				scalar meanbunch=eresp*`predcut'[1,1]-`B'*`cutoff'/2
-				scalar totalresponse=eresp*`predcut'[1,1]
+				scalar eresp=(`bw'*`B')/h0tau
+				scalar meanbunch=eresp*h0tau-`B'*`cutoff'/2
+				scalar totalresponse=eresp*h0tau
 				}
 			
-			loc coleq `coleq' bunching bunching bunching bunching
-			loc names `names' mean_nonbunchers marginal_response total_response average_response
-			mat `b'=`b',meannonbunch,eresp,totalresponse,meanbunch
+			loc coleq `coleq' bunching bunching bunching bunching bunching
+			loc names `names' mean_h0L mean_h0H marginal_response total_response average_response
+			mat `b'=`b',meanh0L,meanh0H,eresp,totalresponse,`=totalresponse/`B''
 			}
-
-		
 		
 		restore
 	
@@ -348,10 +391,8 @@ program rfbunch, eclass sortpreserve
 			
 			preserve
 			drop if !`touse'
-			keep `varlist' `xvars'
+			keep `varlist' `xvars' `characteruze'
 			gen `useobs'=`varlist'<=`zL'|`varlist'>`zH'
-			count if !`useobs'
-			loc N_bunchreg=r(N)
 			
 			if "`localbw'"!="" {
 				if "`localbw'"!="rdbw" {
@@ -381,7 +422,7 @@ program rfbunch, eclass sortpreserve
 				loc localweights [aw=w]
 				}
 									
-			tempname means integerbin adjustbin adjustz
+			tempname means integerbin adjustbin adjustz pred_excess pred_missing pred_cf
 			tempvar predy f0 f1 f above fabove mean_b_cf
 			
 			if `type'<2&`hole'==0 gen `bin'=ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2
@@ -401,8 +442,10 @@ program rfbunch, eclass sortpreserve
 			
 			gen `above'=`varlist'>`cutoff'
 			loc i=0
-			foreach var in `xvars' {
+			foreach var in `xvars' `char' {
 				loc ++i
+				loc fnames0
+				loc fnames1
 				
 				if "`localbw'"=="rdbw" {
 					rdbwselect `var' `varlist' if `useobs', c(`cutoff') kernel(`localkernel')
@@ -417,7 +460,7 @@ program rfbunch, eclass sortpreserve
 					loc rhsvarsnl
 					loc rhsvars
 					forvalues k=1/`=`polynomials'[`=`i'+1',1]' {
-						if `xtypes'[`i',1]==0|inlist("`adjust'","none","","y") loc xvar `varlist'
+						if `xtypes'[`i',1]==0|inlist("`adjust'","","y") loc xvar `varlist'
 						else loc xvar `adjustz'
 						if `k'==1 loc rhsvars c.`xvar'
 						else loc rhsvars `rhsvars'##c.`xvar'
@@ -427,7 +470,13 @@ program rfbunch, eclass sortpreserve
 					}
 				}
 				
-				if `xtypes'[`i',1]==0  reg `var' `rhsvars' 1.`above' 1.`above'#(`rhsvars')  `localweights'  if `useobs' //no link
+				if `xtypes'[`i',1]==0  {
+					reg `var' `rhsvars' `localweights'  if `varlist'<=`zL' //no link
+					mat `f0'=e(b)
+					reg `var' `rhsvars' `localweights'  if `varlist'>`zH'
+					mat `f1'=e(b)
+				}
+					
 				else if `xtypes'[`i',1]==1  {
 					reg `var' `rhsvars' if `varlist'<`zL'
 					tempname init
@@ -437,43 +486,68 @@ program rfbunch, eclass sortpreserve
 						loc initials `initials' beta`k' `=`init'[1,`k']'
 					}
 					nl (`var'= (`rhsvarsnl' {beta0})*(1+{gamma}*`above') ) if `useobs', initial(beta0 `=_b[_cons]' `initials' gamma 0)
-					est sto nl
-					fvexpand `rhsvars'
-					loc names `names' `=subinstr("`r(varlist)'","`adjustz'","`varlist'",.)' _cons above
+					mat `f0'=e(b)
+					mat `f0'=`f0'[1,1..`=`polynomials'[`=`i'+1',1]+1']
+					mat `f1'=`f0'*(1+_b[gamma:])
+					loc gamma=_b[gamma:]
 				}
-				else if `xtypes'[`i',1]==2 reg `var' `rhsvars' 1.`above' `localweights'  if `useobs' //assume x0/x1=constant, y in logs
-				else if `xtypes'[`i',1]==3 reg `var' `rhsvars'  `localweights' if `useobs' //characterize, assume x0==x1
 				
-				mat `b'=`b',e(b)
-				mat `f'=e(b)
-				if `=`polynomials'[`=`i'+1',1]'>0  {
-					if `xtypes'[`i',1]!=1 mat `f'=`f'[1,`=colsof(`f')'],`f'[1,1..`=`polynomials'[`=`i'+1',1]']
-					else mat `f'=`f'[1,`=colsof(`f')-1'],`f'[1,1..`=`polynomials'[`=`i'+1',1]']
-					}
-				else mat `f'=_b[_cons]
-				mata:mean_nonbunchers=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`zL'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff')-polyeval(polyinteg(st_matrix("`cf'"),1),`zL'))	
-				mata: st_numscalar("mean_nonbunchers",mean_nonbunchers)
-				local colnames: colnames e(b)
-				if `xtypes'[`i',1]!=1 loc names `names' `=subinstr("`=subinstr("`colnames'","`adjustz'","`varlist'",.)'","1.`above'","above",.)'
-				forvalues j=1/`=colsof(e(b))' {
-					loc coleq `coleq' `var'
+				else if `xtypes'[`i',1]==2 {
+					reg `var' `rhsvars' 1.`above' `localweights'  if `useobs' //assume x0/x1=constant if y is in logs, x1-x0 = constant if y is in levels
+					mat `f0'=e(b)
+					mat `f0'=`f0'[1,1..`=`polynomials'[`=`i'+1',1]'],`f0'[1,`=colsof(`f0')']
+					mat `f1'=e(b)
+					mat `f1'=`f1'[1,1..`=`polynomials'[`=`i'+1',1]'],`f1'[1,`=colsof(`f1')']+`f1'[1,`=colsof(`f1')-1']
 				}
-				predict double `predy' if inrange(`varlist',`zL',`cutoff'), residuals
-				su `predy'
-				loc excess=r(sum)
-				drop `predy'
-				mat `b'=`b',`excess',mean_nonbunchers,`excess'/`N_bunchreg'
 				
-				loc names `names' excess_value mean_nonbunchers average_prediction_error
-				loc coleq `coleq' `var'_means `var'_means `var'_means
-				if `B'>0&"`placebo'"==""  {
-					mata: mean_counterfactual=(polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff'+`=eresp')-polyeval(polyinteg(polymult(st_matrix("`cf'"),st_matrix("`f'")),1),`cutoff'))/(polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff'+`=eresp')-polyeval(polyinteg(st_matrix("`cf'"),1),`cutoff'))
-					mata: st_numscalar("mean_b_cf",mean_counterfactual)
-					mat `b'=`b',`=`excess'/`B'+mean_nonbunchers',mean_b_cf,`=`excess'/`B'+mean_nonbunchers-mean_b_cf'
-					loc names `names' mean_bunchers mean_bunchers_cf bunchers_diff
-					loc coleq `coleq' `var'_means `var'_means `var'_means 
-					}
-					
+				else if `xtypes'[`i',1]==3 {		
+					noi reg `var' `rhsvars'  `localweights' if `useobs' //characterize, assume x0==x1
+					mat `f0'=e(b)
+					mat `f1'=e(b)
+				}
+				
+				
+				mat `b'=`b',`f0',`f1'
+				local names `names' `rhsvars' _cons `rhsvars' _cons
+				mat `f0'=`f0'[1,`=colsof(`f0')'],`f0'[1,1..`=`polynomials'[`=`i'+1',1]']
+				mat `f1'=`f1'[1,`=colsof(`f1')'],`f1'[1,1..`=`polynomials'[`=`i'+1',1]']
+				forvalues j=1/`=(`polynomials'[`=`i'+1',1]+1)' {
+					loc coleq `coleq' f0_`var'
+				}
+				forvalues j=1/`=(`polynomials'[`=`i'+1',1]+1)' {
+					loc coleq `coleq' f1_`var'
+				}
+
+				mata: st_matrix("`pred_excess'",(polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`cutoff')-polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`zL')) /	(polyeval(polyinteg(h0,1),`cutoff')-	polyeval(polyinteg(h0,1),`zL'))) 
+				mata: st_matrix("`pred_missing'",(polyeval(polyinteg(polymult(h0,st_matrix("`f1'")),1),`zH')-polyeval(polyinteg(polymult(h0,st_matrix("`f1'")),1),`cutoff')) :/(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`cutoff')))
+				mata: w1=(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`cutoff'))/(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL'))
+				mata: w0=(polyeval(polyinteg(h0,1),`cutoff')-polyeval(polyinteg(h0,1),`zL'))/(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL'))
+				mata: st_matrix("`pred_cf'",w0*st_matrix("`pred_excess'")+w1*st_matrix("`pred_missing'"))
+			
+				su `var' if `varlist'<=`cutoff'&`varlist'>`zL'
+				loc bunchers_mean=(r(mean)-`pred_excess'[1,1])/`fs0'+`pred_excess'[1,1]
+				su `var' if `varlist'>`cutoff'&`varlist'<=`zH'
+				loc bunchers_cf=(`pred_missing'[1,1]-r(mean)*(1-`fs1'))/`fs1'
+				
+				/*noi su `var' if `varlist'<=`zH'&`varlist'>`zL'	
+				loc itt=r(mean)-`pred_cf'[1,1]
+				loc late=`itt'/`fs'*/
+				
+				if `xtypes'[`i',1]==1 {
+					loc names `names' proportional_shift
+					loc coleq `coleq' `var'_effects
+					mat `b'=`b',`gamma'
+				}
+				else if `xtypes'[`i',1]==2 {
+					loc names `names' constant_shift
+					loc coleq `coleq' `var'_effects
+					mat `b'=`b',_b[1.`above']
+				}
+				loc names `names' predicted_mean_excess predicted_mean_missing bunchers_mean bunchers_cf bunchers_late
+				loc coleq `coleq' `var'_effects `var'_effects  `var'_effects `var'_effects `var'_effects 
+				
+				mat `b'=`b',`pred_excess'[1,1],`pred_missing'[1,1],`bunchers_mean',`bunchers_cf',`=`bunchers_mean'-`bunchers_cf''
+						
 				reg `var' ibn.`integerbin', nocons
 				mat `means'=e(b)
 				
@@ -525,10 +599,9 @@ program rfbunch, eclass sortpreserve
 			loc coleq `coleq' notch
 		}
 
-
 		mat colnames `b'=`names'
 		mat coleq `b'=`coleq'
-
+		noi mat li `b'
 		eret post `b', esample(`touse') obs(`N')
 		ereturn matrix polynomial=`polynomials'
 		ereturn scalar bandwidth=`bw'
@@ -546,7 +619,7 @@ program rfbunch, eclass sortpreserve
 		ereturn local indepvars `xvars'
 		mat colnames `table'=`colfreq'
 		ereturn matrix table=`table'
-		if "`adjust'"!="none"&"`adjust'"!="" {
+		if "`adjust'"!="" {
 			mat colnames `adj_table'=`adjnames'
 			ereturn matrix adj_table=`adj_table'
 			ereturn local adjustment="`adjust'"
@@ -646,10 +719,24 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 {
 	max=max(X)
 	shift=init
+	data=fill(X,bw,zL,zH,shift,type,fill,cutoff,hole)
+	xbin=J(rows(data[.,1]),1,1)
+	
+	for (p=1; p<=k; p++) xbin=xbin,data[.,1]:^p
+	b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
+	
+	if (type==2) 		v=(BM*bw-polyeval(polyinteg(b,1),max/(1+shift))+polyeval(polyinteg(b,1),zL))
+	else if (type==3) 	v=(BM*bw-polyeval(polyinteg(b,1),max-log(1+shift))+polyeval(polyinteg(b,1),zL))
+	else v=(BM*bw-polyeval(polyinteg(b,1),max)+polyeval(polyinteg(b,1),zL))
+	if (v<0) {
+		neg=-1
+	}
+	else {
+		neg=1
+	}
 	for (i=2;i<=precision;i++) {
-		v=1
-		while (v>0)	{	
-			shift=shift-1/10^(i-1)
+		while (v*neg>0)	{	
+			shift=shift-neg/10^(i-1)
 			data=fill(X,bw,zL,zH,shift,type,fill,cutoff,hole)
 	    
 			xbin=J(rows(data[.,1]),1,1)
@@ -661,10 +748,29 @@ v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*(
 			else if (type==3) 	v=(BM*bw-polyeval(polyinteg(b,1),max-log(1+shift))+polyeval(polyinteg(b,1),zL))
 			else v=(BM*bw-polyeval(polyinteg(b,1),max)+polyeval(polyinteg(b,1),zL))
 			}
-		shift=shift+1/10^(i-1)
+		shift=shift+neg/10^(i-1)
 	}
 
 return(b,shift)
+}
+
+function iterate(real matrix X, real scalar bw, real scalar fill, real scalar zL, real scalar zH, real scalar cutoff, real scalar hole, real scalar k,real scalar precision, real scalar BM) 
+{
+		max=max(X)
+		for (i=2;i<=precision;i++) {
+			v=1
+			while ((v>0)&(zH<max)) {
+				data=fill(select(X,(X:<=zL) :| (X:>zH)),bw,zL,zH,0,0,fill,cutoff,hole)
+				
+				xbin=J(rows(data[.,1]),1,1)
+				for (p=1; p<=k; p++) xbin=xbin,data[.,1]:^p
+				b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
+				v=(BM*bw-polyeval(polyinteg(b,1),max)+polyeval(polyinteg(b,1),zL))
+				zH=zH+cutoff/10^(i-1)
+			}
+		zH=zH-cutoff/10^(i-1)
+		}
+		return(b,zH)
 }
 
 function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real scalar shift, real scalar type,fill,cutoff,hole) 
@@ -709,5 +815,4 @@ function fill(real matrix X,real scalar bw,real scalar zL, real scalar zH, real 
 		}
 
 	
-
 end
