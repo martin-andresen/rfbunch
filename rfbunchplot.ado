@@ -89,7 +89,7 @@ cap prog drop rfbunchplot
 				mat `meanmat'=e(b)
 				mat `meanmat'=`meanmat'[1,"`namelist'_effects:"]'
 				if `xtype'==1|`xtype'==2 mat `meanmat'=`meanmat'[2..5,1]
-				mat `meanmat'=`meanmat'[2..4,1]
+				mat `meanmat'=`meanmat'[1..4,1]
 				svmat `meanmat'
 				loc ytitle `namelist'
 				gen `x'=_b[bunching:mean_h0L] in 1
@@ -121,7 +121,7 @@ cap prog drop rfbunchplot
 		}
 		else {
 			loc background (scatter `namelist' `e(binname)' if `e(binname)'<=`zL'|`e(binname)'>`zH', color(black) msymbol(circle_hollow)) (scatter `namelist' `e(binname)' if `e(binname)'<=`zH'&`e(binname)'>`zL', color(maroon) msymbol(circle)) `meanscatter'
-			loc lines (line `f0' `e(binname)' if `e(binname)'<=`zL', color(maroon)) (line `f0' `e(binname)' if `e(binname)'>`zL', color(maroon) lpattern(dash))  (line `f1' `e(binname)' if `e(binname)'>`zH', color(navy)) (line `f1' `e(binname)' if `e(binname)'<=`zH', color(navy) lpattern(dash))
+			loc lines (line `f0' `e(binname)' if `e(binname)'<=`zL', color(maroon)) (line `f0' `e(binname)' if `e(binname)'>`zL'&`e(binname)'<`e(cutoff)', color(maroon) lpattern(dash))  (line `f1' `e(binname)' if `e(binname)'>`zH', color(navy)) (line `f1' `e(binname)' if `e(binname)'<=`zH'&`e(binname)'&`e(binname)'>`e(cutoff)', color(navy) lpattern(dash))
 			loc labels label(1 "mean in bin") label(`=3+`plus'' "polynomial fit") `meanlab' `cilab' order(1 `=3+`plus'' `meanlabno' `cilabno') cols(`=2+`plus'')
 		}
 			
