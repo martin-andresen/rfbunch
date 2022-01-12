@@ -49,20 +49,21 @@ cap prog drop rfbunchplot
 		
 		
 		
-		if "`limits'"!="" {
-			gettoken min max: limits
+		if "`limit'"!="" {
+			gettoken min max: limit
 			drop if `e(binname)'<`min'|`e(binname)'>`max'
 		}
 		su `e(binname)'
 		loc xmin=r(min)
 		loc xmax=r(max)
 		
+		loc plus=0
 		if "`namelist'"=="`=e(binname)'" {
 			mat `h0'=e(b)
 			mat `h0'=`h0'[1,"counterfactual_frequency:"]
 			mat score `h0'=`h0'
 			
-			loc plus=0
+			
 			if "`ci'"!="noci" {
 				predict double `stdp', stdp
 				gen `h0_l'=`h0'-invnormal(0.975)*`stdp'
@@ -89,10 +90,12 @@ cap prog drop rfbunchplot
 				mat `meanmat'=`meanmat'[1,"`namelist'_effects:"]'
 				svmat `meanmat'
 				loc ytitle `namelist'
-				gen `x'=_b[bunching:mean_h0L] in 1
-				replace `x'=_b[bunching:mean_h0H] in 2
-				replace `x'=`zL'+(`=e(cutoff)'-`zL')*0.9 in 3
-				replace `x'=`zH'-(`zH'-`=e(cutoff)')*0.9 in 4
+				if `xtype'==1|`xtype'==2 loc add=1
+				else loc add=0
+				gen `x'=_b[bunching:mean_h0L] in `=1+`add''
+				replace `x'=_b[bunching:mean_h0H] in `=2+`add''
+				replace `x'=`zL'+(`=e(cutoff)'-`zL')*0.9 in `=3+`add''
+				replace `x'=`zH'-(`zH'-`=e(cutoff)')*0.9 in `4+`add''
 				loc meanscatter (scatter `meanmat'1 `x', color(dkgreen) msymbol(circle))
 				loc ++plus
 				loc meanlabno=3
@@ -111,7 +114,7 @@ cap prog drop rfbunchplot
 		else loc ytitle frequency
 		
 		if "`namelist'"=="`e(binname)'" {
-			loc background (bar freq `e(binname)', barwidth(`=e(bandwidth)'))
+			loc background (bar freq `e(binname)', barwidth(`=e(bandwidth)') color(navy))
 			loc lines (line `h0' `e(binname)' if `e(binname)'<=`zL', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zH', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zL'&`e(binname)'<=`zH', color(maroon) lpattern(dash))
 			loc labels label(1 "observed") label(`=2+`plus'' "estimated counterfactual") `cilab' order(1 `=2+`plus'' `cilabno') cols(`=2+`plus'')
 		}
