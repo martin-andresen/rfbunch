@@ -4,7 +4,7 @@
 cap prog drop rfbunchplot
 	program rfbunchplot
 	
-	syntax [name], [graph_opts(string) /*parameters(string)*/ noci nostar adjust limit(numlist min=2 max=2) weight nomeans]
+	syntax [name], [graph_opts(string) parameters(string) noci nostar adjust limit(numlist min=2 max=2) weight nomeans]
 	quietly {
 		if "`=e(cmdname)'"!="rfbunch" {
 			noi di in red "Estimates in memory not created by rfbunch"
@@ -79,6 +79,28 @@ cap prog drop rfbunchplot
 		loc zH=e(upper_limit)
 		
 
+		if "`adjust'"!="" {
+			loc ++plus
+			tempname adj
+			cap mat `adj'=e(adj_table)
+			if _rc!=0 {
+				noi di in red "no adjustment was made to estimates in memory, cannot use option adjust."
+				exit 301
+			}
+			svmat `adj', names(col)
+			foreach var in freq `namelist' bin {
+					cap replace adj_`var'=. if (adj_bin*(1+_b[bunching:shift])<`zH')
+				}
+			if "`limit'"!="" {
+				foreach var in freq `namelist' bin {
+					cap replace adj_`var'=. if (adj_bin*(1+_b[bunching:shift])>`max'
+				}
+			}
+			if "`namelist'"=="`e(binname)'" loc adj (bar adj_freq  adj_bin, color(maroon%50) barwidth(`=e(bandwidth)') base(0))
+			else loc adj (scatter adj_`namelist' adj_bin, color(maroon) msymbol(circle_hollow))
+			noi su adj_bin
+		}
+		
 		if "`e(binname)'"!="`namelist'" {
 			forvalues t=0/1 {
 				mat `f`t''=e(b)
@@ -109,13 +131,13 @@ cap prog drop rfbunchplot
 					loc cilabno=4
 					loc cilab label(`cilabno' "95% CI") 
 					loc ++plus
-					}
+					}	
 				}
 			}
 		else loc ytitle frequency
 		
 		if "`namelist'"=="`e(binname)'" {
-			loc background (bar freq `e(binname)', barwidth(`=e(bandwidth)') color(navy))
+			loc background (bar freq `e(binname)', barwidth(`=e(bandwidth)') color(navy) base(0))
 			loc lines (line `h0' `e(binname)' if `e(binname)'<=`zL', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zH', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zL'&`e(binname)'<=`zH', color(maroon) lpattern(dash))
 			loc labels label(1 "observed") label(`=2+`plus'' "estimated counterfactual") `cilab' order(1 `=2+`plus'' `cilabno') cols(`=2+`plus'')
 		}
@@ -124,8 +146,10 @@ cap prog drop rfbunchplot
 			loc lines (line `f0' `e(binname)' if `e(binname)'<=`zL', color(maroon)) (line `f0' `e(binname)' if `e(binname)'>`zL'&`e(binname)'<`e(cutoff)', color(maroon) lpattern(dash))  (line `f1' `e(binname)' if `e(binname)'>`zH', color(navy)) (line `f1' `e(binname)' if `e(binname)'<=`zH'&`e(binname)'&`e(binname)'>`e(cutoff)', color(navy) lpattern(dash))
 			loc labels label(1 "mean in bin") label(`=3+`plus'' "polynomial fit") `meanlab' `cilab' order(1 `=3+`plus'' `meanlabno' `cilabno') cols(`=2+`plus'')
 		}
+		
+
 			
-		twoway `background' `ciplot' `lines', xline(`zH', lpattern(dash) lcolor(black)) xline(`zL', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) graphregion(color(white)) plotregion(lcolor(black)) ytitle("`ytitle'") legend(`labels') `graph_opts' 	 		
+		twoway `background' `adj' `ciplot' `lines', xline(`zH', lpattern(dash) lcolor(black)) xline(`zL', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) graphregion(color(white)) plotregion(lcolor(black)) ytitle("`ytitle'") legend(`labels') `graph_opts' 	 		
 
 		restore
 	}
