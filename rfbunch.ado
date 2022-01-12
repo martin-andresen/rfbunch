@@ -459,11 +459,18 @@ program rfbunch, eclass sortpreserve
 				if `=`polynomials'[`=`i'+1',1]'>0 {
 					loc rhsvarsnl
 					loc rhsvars
+					loc znames
 					forvalues k=1/`=`polynomials'[`=`i'+1',1]' {
 						if `xtypes'[`i',1]==0|inlist("`adjust'","","y") loc xvar `varlist'
 						else loc xvar `adjustz'
-						if `k'==1 loc rhsvars c.`xvar'
-						else loc rhsvars `rhsvars'##c.`xvar'
+						if `k'==1 {
+							loc rhsvars c.`xvar'
+							loc znames c.`varlist'
+						}
+						else {
+							loc rhsvars `rhsvars'##c.`xvar'
+							loc znames `znames'##c.`varlist'
+						}
 						if `xtypes'[`i',1]==1 {
 								loc rhsvarsnl `rhsvarsnl' {beta`k'}*`xvar'^`k'+
 						}
@@ -506,9 +513,9 @@ program rfbunch, eclass sortpreserve
 					mat `f1'=e(b)
 				}
 				
-				
 				mat `b'=`b',`f0',`f1'
-				local names `names' `rhsvars' _cons `rhsvars' _cons
+				fvexpand `znames'
+				local names `names' `r(varlist)' _cons `r(varlist)' _cons
 				mat `f0'=`f0'[1,`=colsof(`f0')'],`f0'[1,1..`=`polynomials'[`=`i'+1',1]']
 				mat `f1'=`f1'[1,`=colsof(`f1')'],`f1'[1,1..`=`polynomials'[`=`i'+1',1]']
 				forvalues j=1/`=(`polynomials'[`=`i'+1',1]+1)' {
