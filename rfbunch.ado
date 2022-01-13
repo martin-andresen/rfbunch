@@ -294,6 +294,11 @@
 				loc names `names' shift
 				loc coleq `coleq' bunching
 				loc adjnames adj_bin adj_freq
+				if `shift'>0 {
+					noi di as text "Note: Estimated shift parameter is positive. You might want to think about whether it makes "
+					noi di as text "sense that agents exposed to the regime above the threshold should decrease z relative to their"
+					noi di as text "counterfactual under the regime below the cutoff."
+				}
 				}
 			
 			//get counterfactual by iteratively adjusting upper bound zH untill missing mass==excess mass
@@ -347,7 +352,10 @@
 			else scalar meannonbunch=(`cutoff'-`zL')/2
 			
 			if `B'<0|"`placebo'"!="" {
-				if `B'<0&"`placebo'"=="" noi di as text "Negative estimates of B - no bunching in the bunching region. Marginal response, total response and counterfactual mean among bunchers cannot be calculated."
+				if `B'<0&"`placebo'"=="" {
+					noi di as text "Negative estimates of B - no bunching in the bunching region. Marginal response,"
+					noi di as text "total response and counterfactual mean among bunchers cannot be calculated."
+				}
 				mat `b'=`b',meannonbunch
 				loc coleq `coleq' bunching
 				loc names `names' mean_nonbunchers
@@ -388,7 +396,10 @@
 		
 			//ESTIMATE REPONSE ALONG OTHER ENDOGENOUS VARS
 			if "`xvars'"!="" {
-				if `B'<0&"`placebo'"=="" noi di as text "Mean counterfactual for bunchers and difference between bunchers means and this quantity cannot be calculated for alternative because B<0."
+				if `B'<0&"`placebo'"=="" {
+					noi di as text "Mean counterfactual for bunchers and difference between bunchers "
+					noi di as text "means and this quantity cannot be calculated for alternative because B<0."
+				}
 				
 				preserve
 				drop if !`touse'
@@ -509,7 +520,7 @@
 					}
 					
 					else if `xtypes'[`i',1]==3 {		
-						noi reg `var' `rhsvars'  `localweights' if `useobs' //characterize, assume x0==x1
+						reg `var' `rhsvars'  `localweights' if `useobs' //characterize, assume x0==x1
 						mat `f0'=e(b)
 						mat `f1'=e(b)
 					}
@@ -526,9 +537,12 @@
 						loc coleq `coleq' f1_`var'
 					}
 
+					if "`adjust'"=="x" mata: h1=h0:*(1+`shift')
+					else if "`adjust'"=="logx" mata: h1=h0[1]+`shift',h0[2..`=`polynomial'[1,1]+1']
+					else mata: h1=h0
 					mata: st_matrix("`pred_excess'",(polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`cutoff')-polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`zL')) /	(polyeval(polyinteg(h0,1),`cutoff')-	polyeval(polyinteg(h0,1),`zL'))) 
-					mata: st_matrix("`pred_missing'",(polyeval(polyinteg(polymult(h0,st_matrix("`f1'")),1),`zH')-polyeval(polyinteg(polymult(h0,st_matrix("`f1'")),1),`cutoff')) :/(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`cutoff')))
-					mata: w1=(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`cutoff'))/(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL'))
+					mata: st_matrix("`pred_missing'",(polyeval(polyinteg(polymult(h1,st_matrix("`f1'")),1),`zH')-polyeval(polyinteg(polymult(h1,st_matrix("`f1'")),1),`cutoff')) :/(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff')))
+					mata: w1=(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff'))/(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`zL'))
 					mata: w0=(polyeval(polyinteg(h0,1),`cutoff')-polyeval(polyinteg(h0,1),`zL'))/(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL'))
 					mata: st_matrix("`pred_cf'",w0*st_matrix("`pred_excess'")+w1*st_matrix("`pred_missing'"))
 				

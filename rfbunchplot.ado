@@ -89,11 +89,11 @@ cap prog drop rfbunchplot
 			}
 			svmat `adj', names(col)
 			foreach var in freq `namelist' bin {
-					replace adj_`var'=. if adj_bin*(1+_b[bunching:shift])<`zH'
+					cap replace adj_`var'=. if adj_bin*(1+_b[bunching:shift])<`zH'
 				}
 			if "`limit'"!="" {
 				foreach var in freq `namelist' bin {
-					replace adj_`var'=. if adj_bin*(1+_b[bunching:shift])>`max'
+					cap replace adj_`var'=. if adj_bin*(1+_b[bunching:shift])>`max'
 				}
 			}
 			if "`namelist'"=="`e(binname)'" loc adj (bar adj_freq  adj_bin, color(maroon%50) barwidth(`=e(bandwidth)') base(0))
