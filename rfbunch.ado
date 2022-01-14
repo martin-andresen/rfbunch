@@ -568,7 +568,7 @@
 					loc names `names' predicted_mean_excess predicted_mean_missing bunchers_mean bunchers_cf bunchers_late sorting_diff relative_sorting
 					loc coleq `coleq' `var'_effects `var'_effects  `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects 
 					
-					mat `b'=`b',`pred_excess'[1,1],`pred_missing'[1,1],`bunchers_mean',`bunchers_cf',`=`bunchers_mean'-`bunchers_cf'',`=`bunchers_mean'-`pred_missing'[1,1]',`=`bunchers_mean'/`pred_missing'[1,1]'						
+					mat `b'=`b',`pred_excess'[1,1],`pred_missing'[1,1],`bunchers_mean',`bunchers_cf',`=`bunchers_mean'-`bunchers_cf'',`=`bunchers_cf'-`pred_missing'[1,1]',`=`bunchers_cf'/`pred_missing'[1,1]'						
 					reg `var' ibn.`integerbin', nocons
 					mat `means'=e(b)
 					
