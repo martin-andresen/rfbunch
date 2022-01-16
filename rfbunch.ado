@@ -331,10 +331,14 @@
 				local shift=0
 			}
 			
+			if "`adjust'"=="x" mata: h1=h0:*(1+`shift')
+			else if "`adjust'"=="logx" mata: h1=h0[1]+`shift',h0[2..`=`polynomial'[1,1]+1']
+			else mata: h1=h0
+					
 			mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`cutoff',0,`type',0,`cutoff',0))
 			mata: st_numscalar("maniprangecf",(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL'))/`bw')
 			mata: st_numscalar("excesscf",(polyeval(polyinteg(h0,1),`cutoff')-polyeval(polyinteg(h0,1),`zL'))/`bw')
-			mata: st_numscalar("misscf",(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`cutoff'))/`bw')
+			mata: st_numscalar("misscf",(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff'))/`bw')
 			mata: st_numscalar("h0tau",(polyeval(h0,`cutoff')))
 
 			loc B=`Bunchmass'-excesscf
@@ -537,9 +541,6 @@
 						loc coleq `coleq' f1_`var'
 					}
 
-					if "`adjust'"=="x" mata: h1=h0:*(1+`shift')
-					else if "`adjust'"=="logx" mata: h1=h0[1]+`shift',h0[2..`=`polynomial'[1,1]+1']
-					else mata: h1=h0
 					mata: st_matrix("`pred_excess'",(polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`cutoff')-polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`zL')) /	(polyeval(polyinteg(h0,1),`cutoff')-	polyeval(polyinteg(h0,1),`zL'))) 
 					mata: st_matrix("`pred_missing'",(polyeval(polyinteg(polymult(h1,st_matrix("`f1'")),1),`zH')-polyeval(polyinteg(polymult(h1,st_matrix("`f1'")),1),`cutoff')) :/(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff')))
 					mata: w1=(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff'))/(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`zL'))
