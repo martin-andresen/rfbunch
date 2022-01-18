@@ -549,8 +549,10 @@
 				
 					su `var' if `varlist'<=`cutoff'&`varlist'>`zL'
 					loc bunchers_mean=(r(mean)-`pred_excess'[1,1])/`fs0'+`pred_excess'[1,1]
+					loc prediction_error0=(r(mean)-`pred_excess'[1,1])
 					su `var' if `varlist'>`cutoff'&`varlist'<=`zH'
 					loc bunchers_cf=(`pred_missing'[1,1]-r(mean)*(1-`fs1'))/`fs1'
+					loc prediction_error1=(`pred_missing'[1,1]-r(mean))
 					su `var' if `varlist'<=`zH'&`varlist'>`zL'
 					loc itt=r(mean)-`pred_cf'[1,1]
 					
@@ -573,10 +575,10 @@
 						loc coleq `coleq' `var'_effects
 						mat `b'=`b',_b[1.`above']
 					}
-					loc names `names' predicted_mean_excess predicted_mean_missing bunchers_mean bunchers_cf bunchers_late itt sorting_diff relative_sorting
-					loc coleq `coleq' `var'_effects `var'_effects  `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects 
+					loc names `names' predicted_mean_excess predicted_mean_missing prediction_error0 prediction_error1 bunchers_mean bunchers_cf bunchers_late itt sorting_diff relative_sorting
+					loc coleq `coleq' `var'_effects `var'_effects  `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects 
 					
-					mat `b'=`b',`pred_excess'[1,1],`pred_missing'[1,1],`bunchers_mean',`bunchers_cf',`=`bunchers_mean'-`bunchers_cf'',`itt',`=`bunchers_cf'-`pred_missing'[1,1]',`=`bunchers_cf'/`pred_missing'[1,1]'						
+					mat `b'=`b',`pred_excess'[1,1],`pred_missing'[1,1], `prediction_error0', `prediction_error1',`bunchers_mean',`bunchers_cf',`=`bunchers_mean'-`bunchers_cf'',`itt',`=`bunchers_cf'-`pred_missing'[1,1]',`=`bunchers_cf'/`pred_missing'[1,1]'						
 					reg `var' ibn.`integerbin', nocons
 					mat `means'=e(b)
 					
