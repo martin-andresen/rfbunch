@@ -330,9 +330,8 @@
 				mat `b'=`b'[1,2..`=colsof(`b')'],`b'[1,1]
 				local shift=0
 			}
-			
-			if "`adjust'"=="x" mata: h1=h0:*(1+`shift')
-			else if "`adjust'"=="logx" mata: h1=h0[1]+`shift',h0[2..`=`polynomial'[1,1]+1']
+			if "`adjust'"=="x" mata: h1=h0:/((1+`shift'):^((0::`=`polynomials'[1,1]')'))
+			else if "`adjust'"=="logx" mata: h1=h0[1]+`shift',h0[2..`=`polynomials'[1,1]+1']
 			else mata: h1=h0
 					
 			mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`cutoff',0,`type',0,`cutoff',0))
@@ -442,8 +441,9 @@
 				tempvar predy f0 f1 f above fabove mean_b_cf
 				
 				if `type'<2&`hole'==0 gen `bin'=ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2
-				else gen `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + (`varlist'>`cutoff')*(floor((`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'+`bw'/2)			
+				else gen `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + (`varlist'>`cutoff')*(floor((`varlist'-`cutoff'+2^-23)/`bw')*`bw'+`cutoff'+`bw'/2)			
 				sort `bin'
+				
 				egen `integerbin'=group(`bin')
 				
 				if `type'==2 {
@@ -477,7 +477,7 @@
 						loc rhsvars
 						loc znames
 						forvalues k=1/`=`polynomials'[`=`i'+1',1]' {
-							if `xtypes'[`i',1]==0|inlist("`adjust'","","y") loc xvar `varlist'
+							if inlist("`adjust'","","y")/*|`xtypes'[`i',1]==0*/ loc xvar `varlist'
 							else loc xvar `adjustz'
 							if `k'==1 {
 								loc rhsvars c.`xvar'
@@ -511,7 +511,7 @@
 						nl (`var'= (`rhsvarsnl' {beta0})*(1+{gamma}*`above') ) if `useobs', initial(beta0 `=_b[_cons]' `initials' gamma 0)
 						mat `f0'=e(b)
 						mat `f0'=`f0'[1,1..`=`polynomials'[`=`i'+1',1]+1']
-						mat `f1'=`f0'*(1+_b[gamma:])
+						mata:st_matrix("`f1'",st_matrix("`f0'"):*(1+`=_b[gamma:]'))
 						loc gamma=_b[gamma:]
 					}
 					
@@ -551,10 +551,17 @@
 					loc bunchers_mean=(r(mean)-`pred_excess'[1,1])/`fs0'+`pred_excess'[1,1]
 					su `var' if `varlist'>`cutoff'&`varlist'<=`zH'
 					loc bunchers_cf=(`pred_missing'[1,1]-r(mean)*(1-`fs1'))/`fs1'
-					
-					/*noi su `var' if `varlist'<=`zH'&`varlist'>`zL'	
+					su `var' if `varlist'<=`zH'&`varlist'>`zL'
 					loc itt=r(mean)-`pred_cf'[1,1]
-					loc late=`itt'/`fs'*/
+					
+					if `xtypes'[`i',1]==0 {
+						tempname teff
+						mata: st_matrix("`teff'",polyeval(st_matrix("`f1'"),`cutoff')*(1+`shift')-polyeval(st_matrix("`f0'"),`cutoff'))
+						loc teff=`teff'[1,1]
+						loc names `names' RD_effect
+						loc coleq `coleq' `var'_effects
+						mat `b'=`b',`teff'
+					}
 					
 					if `xtypes'[`i',1]==1 {
 						loc names `names' proportional_shift
@@ -566,10 +573,10 @@
 						loc coleq `coleq' `var'_effects
 						mat `b'=`b',_b[1.`above']
 					}
-					loc names `names' predicted_mean_excess predicted_mean_missing bunchers_mean bunchers_cf bunchers_late sorting_diff relative_sorting
-					loc coleq `coleq' `var'_effects `var'_effects  `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects 
+					loc names `names' predicted_mean_excess predicted_mean_missing bunchers_mean bunchers_cf bunchers_late itt sorting_diff relative_sorting
+					loc coleq `coleq' `var'_effects `var'_effects  `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects 
 					
-					mat `b'=`b',`pred_excess'[1,1],`pred_missing'[1,1],`bunchers_mean',`bunchers_cf',`=`bunchers_mean'-`bunchers_cf'',`=`bunchers_cf'-`pred_missing'[1,1]',`=`bunchers_cf'/`pred_missing'[1,1]'						
+					mat `b'=`b',`pred_excess'[1,1],`pred_missing'[1,1],`bunchers_mean',`bunchers_cf',`=`bunchers_mean'-`bunchers_cf'',`itt',`=`bunchers_cf'-`pred_missing'[1,1]',`=`bunchers_cf'/`pred_missing'[1,1]'						
 					reg `var' ibn.`integerbin', nocons
 					mat `means'=e(b)
 					
