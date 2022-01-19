@@ -16,7 +16,7 @@
 		constant ///
 		placebo ///
 		xtype(numlist <=3 >=0 integer) ///
-		precision(integer 3) ///
+		precision(integer 10) ///
 		]
 		
 		quietly {
@@ -765,20 +765,25 @@
 		else {
 			neg=1
 		}
-		//for (i=2;i<=precision;i++) {
-		while (v*neg>0)	{	
-			data=fill(X,bw,zL,zH,shift,type,fill,cutoff,hole)
-			xbin=J(rows(data[.,1]),1,1)
-			for (p=1; p<=k; p++) xbin=xbin,data[.,1]:^p
-			b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
-			
-			if (type==2) 		v=(BM*bw-polyeval(polyinteg(b,1),max/(1+shift))+polyeval(polyinteg(b,1),zL))
-			else if (type==3) 	v=(BM*bw-polyeval(polyinteg(b,1),max-log(1+shift))+polyeval(polyinteg(b,1),zL))
-			else v=(BM*bw-polyeval(polyinteg(b,1),max)+polyeval(polyinteg(b,1),zL))
-			shift=shift-neg/10^precision
-			}
-		
-		//}
+		vhist=.
+		shifthist=.
+		for (i=2;i<=precision;i++) {
+			v=neg
+			while (v*neg>0)	{
+				shift=shift-neg/10^i
+				data=fill(X,bw,zL,zH,shift,type,fill,cutoff,hole)
+				xbin=J(rows(data[.,1]),1,1)
+				for (p=1; p<=k; p++) xbin=xbin,data[.,1]:^p
+				b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
+				
+				if (type==2) 		v=(BM*bw-polyeval(polyinteg(b,1),max/(1+shift))+polyeval(polyinteg(b,1),zL))
+				else if (type==3) 	v=(BM*bw-polyeval(polyinteg(b,1),max-log(1+shift))+polyeval(polyinteg(b,1),zL))
+				else v=(BM*bw-polyeval(polyinteg(b,1),max)+polyeval(polyinteg(b,1),zL))
+				//vhist=vhist,v
+				//shifthist=shifthist,shift
+				}
+		shift=shift+neg/10^i
+		}
 
 	return(b,shift)
 	}
@@ -797,6 +802,7 @@
 					v=(BM*bw-polyeval(polyinteg(b,1),max)+polyeval(polyinteg(b,1),zL))
 					zH=zH+cutoff/10^precision
 				}
+				zH=zH+cutoff/10^precision
 			//}
 			return(b,zH)
 	}
