@@ -437,7 +437,7 @@
 					loc localweights [aw=w]
 					}
 										
-				tempname means integerbin adjustbin adjustz pred_excess pred_missing pred_cf
+				tempname means integerbin adjustbin adjustz pred_excess pred_missing pred_cf w0 w1 f1shift
 				tempvar predy f0 f1 f above fabove mean_b_cf
 				
 				if `type'<2&`hole'==0 gen `bin'=ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2
@@ -512,6 +512,7 @@
 						mat `f0'=e(b)
 						mat `f0'=`f0'[1,1..`=`polynomials'[`=`i'+1',1]+1']
 						mata:st_matrix("`f1'",st_matrix("`f0'"):*(1+`=_b[gamma:]'))
+						
 						loc gamma=_b[gamma:]
 					}
 					
@@ -540,21 +541,23 @@
 					forvalues j=1/`=(`polynomials'[`=`i'+1',1]+1)' {
 						loc coleq `coleq' f1_`var'
 					}
-
-					mata: st_matrix("`pred_excess'",(polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`cutoff')-polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`zL')) /	(polyeval(polyinteg(h0,1),`cutoff')-	polyeval(polyinteg(h0,1),`zL'))) 
-					mata: st_matrix("`pred_missing'",(polyeval(polyinteg(polymult(h1,st_matrix("`f1'")),1),`zH')-polyeval(polyinteg(polymult(h1,st_matrix("`f1'")),1),`cutoff')) :/(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff')))
-					mata: w1=(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff'))/(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`zL'))
-					mata: w0=(polyeval(polyinteg(h0,1),`cutoff')-polyeval(polyinteg(h0,1),`zL'))/(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL'))
-					mata: st_matrix("`pred_cf'",w0*st_matrix("`pred_excess'")+w1*st_matrix("`pred_missing'"))
-				
+					
+					
+					mata: st_matrix("`f1shift'",st_matrix("`f1'"):/((1+`shift'):^((0::`=`polynomials'[`=`i'+1',1]'))'))
+					mata: st_matrix("`pred_excess'",(polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`cutoff')-polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`zL')) /	(polyeval(polyinteg(h0,1),`cutoff')-	polyeval(polyinteg(h0,1),`zL')))
+					mata: st_matrix("`pred_missing'",(polyeval(polyinteg(polymult(h1,st_matrix("`f1shift'")),1),`zH')-polyeval(polyinteg(polymult(h1,st_matrix("`f1shift'")),1),`cutoff')) :/(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff')))
+					mata: st_matrix("`w1'",(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff'))/(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`zL')))
+					mata: st_matrix("`w0'",(polyeval(polyinteg(h0,1),`cutoff')-polyeval(polyinteg(h0,1),`zL'))/(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL')))
+					
+					mat `pred_cf'=`w0'[1,1]*`pred_excess'[1,1]+`w1'[1,1]*`pred_missing'[1,1]
 					su `var' if `varlist'<=`cutoff'&`varlist'>`zL'
-					loc bunchers_mean=(r(mean)-`pred_excess'[1,1])/`fs0'+`pred_excess'[1,1]
+					loc bunchers_mean=(r(mean)-(1-`fs0')*`pred_excess'[1,1])/`fs0'
 					loc prediction_error0=(r(mean)-`pred_excess'[1,1])
-					su `var' if `varlist'>`cutoff'&`varlist'<=`zH'
-					loc bunchers_cf=(`pred_missing'[1,1]-r(mean)*(1-`fs1'))/`fs1'
 					loc prediction_error1=(`pred_missing'[1,1]-r(mean))
 					su `var' if `varlist'<=`zH'&`varlist'>`zL'
 					loc itt=r(mean)-`pred_cf'[1,1]
+					loc bunchers_late=`itt'/`fs'
+					loc bunchers_cf=`bunchers_mean'-`bunchers_late'
 					
 					if `xtypes'[`i',1]==0 {
 						tempname teff
@@ -632,7 +635,8 @@
 
 			mat colnames `b'=`names'
 			mat coleq `b'=`coleq'
-
+			
+			noi mat li `b'
 			eret post `b', esample(`touse') obs(`N')
 			ereturn matrix polynomial=`polynomials'
 			ereturn scalar bandwidth=`bw'
@@ -673,6 +677,7 @@
 			mu=p[2]
 			e=p[3]
 			alpha=p[4]
+			
 			
 				
 	v=		((1-t)*alpha^(1/(e+1))*Ktau^(-1/(e+1))-r+(r/(mu+1))*Ktau^(-mu/(mu+1))*(tau*((mu+1)/mu))^(mu/(mu+1)))^2 \ //FOC for capital, marginal buncher
