@@ -543,7 +543,8 @@
 					}
 					
 					
-					mata: st_matrix("`f1shift'",st_matrix("`f1'"):/((1+`shift'):^((0::`=`polynomials'[`=`i'+1',1]'))'))
+					if "`adjust'"=="x" mata: st_matrix("`f1shift'",st_matrix("`f1'"):/((1+`shift'):^((0::`=`polynomials'[`=`i'+1',1]'))'))
+					else mat `f1shift'=`f1'
 					mata: st_matrix("`pred_excess'",(polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`cutoff')-polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`zL')) /	(polyeval(polyinteg(h0,1),`cutoff')-	polyeval(polyinteg(h0,1),`zL')))
 					mata: st_matrix("`pred_missing'",(polyeval(polyinteg(polymult(h1,st_matrix("`f1shift'")),1),`zH')-polyeval(polyinteg(polymult(h1,st_matrix("`f1shift'")),1),`cutoff')) :/(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff')))
 					mata: st_matrix("`w1'",(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff'))/(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`zL')))
