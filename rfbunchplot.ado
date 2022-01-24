@@ -43,7 +43,7 @@ cap prog drop rfbunchplot
 		
 		clear
 		
-		tempvar h0 f0 f1 h0_l h0_u f0_l f0_u f1_l f1_u freq meanmat x cimat stdp
+		tempvar h0 h1 f0 f1 h0_l h0_u f0_l f0_u f1_l f1_u freq meanmat x cimat stdp
 		mat `freq'= e(table)
 		svmat `freq', names(col)
 		
@@ -60,9 +60,12 @@ cap prog drop rfbunchplot
 		loc plus=0
 		if "`namelist'"=="`=e(binname)'" {
 			mat `h0'=e(b)
-			mat `h0'=`h0'[1,"counterfactual_frequency:"]
+			mat `h0'=`h0'[1,"h0:"]
 			mat score `h0'=`h0'
 			
+			mat `h1'=e(b)
+			mat `h1'=`h1'[1,"h1:"]
+			mat score `h1'=`h1'
 			
 			if "`ci'"!="noci" {
 				predict double `stdp', stdp
@@ -113,7 +116,7 @@ cap prog drop rfbunchplot
 				svmat `meanmat'
 				loc ytitle `namelist'
 				gen `x'=_b[bunching:mean_h0L] in 1
-				replace `x'=_b[bunching:mean_h0H] in 2
+				replace `x'=_b[bunching:mean_h1H] in 2
 				replace `x'=`zL'+(`=e(cutoff)'-`zL')*0.9 in 3
 				replace `x'=`zH'-(`zH'-`=e(cutoff)')*0.9 in 4
 				loc meanscatter (scatter `meanmat'1 `x', color(dkgreen) msymbol(circle))
@@ -136,7 +139,7 @@ cap prog drop rfbunchplot
 		
 		if "`namelist'"=="`e(binname)'" {
 			loc background (bar freq `e(binname)', barwidth(`=e(bandwidth)') color(navy%50) base(0))
-			loc lines (line `h0' `e(binname)' if `e(binname)'<=`zL', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zH', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zL'&`e(binname)'<=`zH', color(maroon) lpattern(dash))
+			loc lines (line `h0' `e(binname)' if `e(binname)'<=`zL', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zH', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zL'&`e(binname)'<=`zH', color(maroon) lpattern(dash)) (line `h1' `e(binname)' if `e(binname)'<=`zL', color(navy)) (line `h1' `e(binname)' if `e(binname)'>`zH', color(navy)) (line `h1' `e(binname)' if `e(binname)'>`zL'&`e(binname)'<=`zH', color(navy) lpattern(dash))
 			loc labels label(1 "observed") label(`=2+`plus'' "estimated counterfactual") `cilab' order(1 `=2+`plus'' `cilabno') cols(`=2+`plus'')
 		}
 		else {
