@@ -347,7 +347,7 @@
 				local shift=0
 			}
 								
-			mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`cutoff',0,`type',0,`cutoff',0,1))
+			mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`cutoff',0,0,0,`cutoff',0,1))
 			//mata: st_numscalar("maniprangecf",(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL'))/`bw')
 			mata: st_numscalar("excesscf",(polyeval(polyinteg(h0,1),`cutoff')-polyeval(polyinteg(h0,1),`zL'))/`bw')
 			mata: st_numscalar("misscf",(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff'))/`bw')
@@ -459,14 +459,14 @@
 				sort `bin'
 				
 				egen `integerbin'=group(`bin')
+				noi tab `integerbin'
 				
 				if `type'==2 {
-					gen `bin0'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + ((`varlist'>`cutoff')*(floor(((`varlist'-`minabove'+2^-23)/(1+`shift0'))/`bw')*`bw'+`minabove'/(1+`shift0')+`bw'/2))
-					gen `bin1'=(`varlist'>`cutoff')*(ceil(((`varlist'-`cutoff')*(1+`shift1'))/`bw')*`bw'+`cutoff'*(1+`shift1')-`bw'/2) + ((`varlist'>`cutoff')*(floor(((`varlist'-`minabove'+2^-23))/`bw')*`bw'+`minabove'+`bw'/2))
+					replace `bin'=(ceil(((`varlist'-`zL'+2^-23)*(1+`shift1'))/`bw')*`bw'+`zL'*(1+`shift1')-`bw'/2) if `varlist'<=`zL'
+					replace `bin'=floor(((`varlist'-`minabove'+2^-23)/(1+`shift0'))/`bw')*`bw'+`minabove'/(1+`shift0')+`bw'/2 if `varlist'>`zH'
+					replace `bin'=. if `varlist'>`zL'&`varlist'<=`zH'
 					gen `adjustz0'=`varlist'/(1+`shift0'*(`varlist'>`cutoff'))
 					gen `adjustz1'=`varlist'*(1+`shift1'*(`varlist'<=`cutoff'))
-					replace `bin'=`bin0' if `varlist'<=`cutoff'
-					replace `bin'=`bin1' if `varlist'>`cutoff'
 					}
 				else if `type'==3 {
 					replace `bin'=(`varlist'<=`cutoff')*(ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2) + ((`varlist'>`cutoff')*(floor((`varlist'-`minabove'+2^-23)/`bw')*`bw'+`minabove'-log(1+`shift')+`bw'/2))
@@ -615,10 +615,15 @@
 					loc coleq `coleq' `var'_effects `var'_effects  `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects `var'_effects
 					
 					mat `b'=`b',`pred_excess'[1,1],`pred_missing'[1,1], `prediction_error0', `prediction_error1',`bunchers_mean',`bunchers_cf',`bunchers_late',`itt',`=`bunchers_cf'-`pred_missing'[1,1]',`=`bunchers_cf'/`pred_missing'[1,1]'
+					
+					//store means in bins
 					reg `var' ibn.`integerbin', nocons
 					mat `means'=e(b)
 					
-					/*mat `table'=`table',`means''
+					noi mat li `table'
+					noi mat li  `means'
+					
+					mat `table'=`table',`means''
 					loc colfreq `colfreq' `var'
 									
 					if `type'>=2 {
@@ -630,7 +635,7 @@
 						
 						mat `adj_table'=`adj_table',`means''
 						loc adjnames `adjnames' adj_`var'
-					}*/
+					}
 					
 					
 					}
