@@ -459,7 +459,6 @@
 				sort `bin'
 				
 				egen `integerbin'=group(`bin')
-				noi tab `integerbin'
 				
 				if `type'==2 {
 					replace `bin'=(ceil(((`varlist'-`zL'+2^-23)*(1+`shift1'))/`bw')*`bw'+`zL'*(1+`shift1')-`bw'/2) if `varlist'<=`zL'
@@ -620,19 +619,13 @@
 					reg `var' ibn.`integerbin', nocons
 					mat `means'=e(b)
 					
-					noi mat li `table'
-					noi mat li  `means'
-					
 					mat `table'=`table',`means''
 					loc colfreq `colfreq' `var'
 									
 					if `type'>=2 {
 						reg `var' ibn.`adjustbin' if `useobs', nocons
 						mat `means'=e(b)
-						
-						noi mat li `means'
-						noi mat li `adj_table'
-						
+
 						mat `adj_table'=`adj_table',`means''
 						loc adjnames `adjnames' adj_`var'
 					}
@@ -677,7 +670,6 @@
 			mat colnames `b'=`names'
 			mat coleq `b'=`coleq'
 			
-			noi mat li `b'
 			eret post `b', esample(`touse') obs(`N')
 			ereturn matrix polynomial=`polynomials'
 			ereturn scalar bandwidth=`bw'
@@ -873,7 +865,7 @@
 			}
 			else if (plus==-1) {
 				if (type==3) bin=(X:>cutoff):*(ceil((X:-cutoff:-2^-23):/bw)*bw:+cutoff:-bw/2) :+ ((X:<=cutoff):*(floor((X:-zH:+2^-23):/bw):*bw:+zH:+log(1+shift):+bw/2))
-				else bin=(X:>cutoff):*(ceil((X:-cutoff):/bw)*bw:+cutoff:-bw/2) :+ (X:<=cutoff):*(ceil(((X:-zL:+2^-23):*(1+shift)):/bw):*bw:+zL:*(1+shift):-bw/2)
+				else bin=(X:>cutoff):*(ceil((X:-cutoff:-2^-23):/bw)*bw:+cutoff:-bw/2) :+ (X:<=cutoff):*(floor(((X:-zL:+2^-23):*(1+shift)):/bw):*bw:+zL:*(1+shift):-bw/2)
 				y=mm_freq(bin)
 			}
 			bin=uniqrows(bin)
