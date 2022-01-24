@@ -136,16 +136,30 @@
 			
 			if "`localbw'"!="" {
 				if "`localbw'"!="rdbw" {
-					cap confirm scalar `localbw'
+					gettoken bw0 bw1: localbw
+					if "`bw0'"!="" cap confirm number `bw0'
 					if _rc!=0 {
-						noi di in red "Option localbw() can only take the values rdbw or a single nonnegative number."
+						noi di in red "Option localbw() can only take the values rdbw or one or  two nonnegative numbers."
 						exit 301
 					}
 					else {
-						if `localbw'<0 {
+						if `bw0'<0 {
 							noi di in red "Option localbw() cannot be negative."
 							exit 301
 						}
+					}
+					if "`bw1'"!="" cap confirm number `bw1'
+					else loc bw1=`bw0'
+					if _rc!=0 {
+						noi di in red "Option localbw() can only take the values rdbw or one or  two nonnegative numbers."
+						exit 301
+					}
+					else {
+						if `bw1'<0 {
+							noi di in red "Option localbw() cannot be negative."
+							exit 301
+						}
+						
 					}
 				}
 				else {
@@ -424,28 +438,18 @@
 				gen `useobs'=`varlist'<=`zL'|`varlist'>`zH'
 				
 				if "`localbw'"!="" {
-					if "`localbw'"!="rdbw" {
-						if `localbw'==0 {
-							su `varlist'
-							loc bwlow=`cutoff'-r(min)
-							loc bwhi=r(max)-`cutoff'
-						}
-						else {
-							loc bwlow=`localbw'
-							loc bwhi=`localbw'
-						}
-					
+					if "`localbw'"!="rdbw" {					
 						if inlist("`localkernel'","","triangular") {
-							gen double w=1-abs(`varlist'-`cutoff')/`bwlow' if `varlist'>`cutoff'-`bwlow'&`varlist'<=`cutoff'
-							replace w=1-abs(`varlist'-`cutoff')/`bwhi' if `varlist'<`cutoff'+`bwhi'&`varlist'>`cutoff'
+							gen double w=1-abs(`varlist'-`cutoff')/`bw0' if (`varlist'>`cutoff'-`bw0')&`varlist'<=`cutoff'
+							replace w=1-abs(`varlist'-`cutoff')/`bw1' if `varlist'<`cutoff'+`bw1'&`varlist'>`cutoff'
 						}
 						else if "`localkernel'"=="epanechnikov" {
-							gen double w=(3/4)*max((1-((`cutoff'-`varlist')/`bwlow')^2),0) if `varlist'>`cutoff'-`bwlow'&`varlist'<=`cutoff'
-							replace w=(3/4)*max((1-((`cutoff'-`varlist')/`bwhi')^2),0) if `varlist'<`cutoff'+`bwhi'&`varlist'>`cutoff'
+							gen double w=(3/4)*max((1-((`cutoff'-`varlist')/`bw0')^2),0) if `varlist'>`cutoff'-`bw0'&`varlist'<=`cutoff'
+							replace w=(3/4)*max((1-((`cutoff'-`varlist')/`bw1')^2),0) if `varlist'<`cutoff'+`bw1'&`varlist'>`cutoff'
 						}
 						else {
-							gen double w=1/2 `varlist'>`cutoff'-`bwlow'&`varlist'<=`cutoff'
-							replace w=1/2 if `varlist'<`cutoff'+`bwhi'&`varlist'>`cutoff'
+							gen double w=1/2 `varlist'>`cutoff'-`bw0'&`varlist'<=`cutoff'
+							replace w=1/2 if `varlist'<`cutoff'+`bw1'&`varlist'>`cutoff'
 							}
 						}
 					loc localweights [aw=w]
@@ -522,9 +526,9 @@
 					}
 					
 					if `xtypes'[`i',1]==0  {
-						reg `var' `rhsvars0' `localweights'  if `varlist'<=`zL' //no link
+						noi reg `var' `rhsvars0' `localweights'  if `varlist'<=`zL' //no link
 						mat `f0'=e(b)
-						reg `var' `rhsvars1' `localweights'  if `varlist'>`zH'
+						noi reg `var' `rhsvars1' `localweights'  if `varlist'>`zH'
 						mat `f1'=e(b)
 					}
 						
