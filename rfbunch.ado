@@ -461,7 +461,7 @@
 				egen `integerbin'=group(`bin')
 				
 				if `type'==2 {
-					replace `bin'=(ceil(((`varlist'-`zL'+2^-23)*(1+`shift1'))/`bw')*`bw'+`zL'*(1+`shift1')-`bw'/2) if `varlist'<=`zL'
+					replace `bin'=(ceil(((`varlist'-`zL'-2^-23)*(1+`shift1'))/`bw')*`bw'+`zL'*(1+`shift1')-`bw'/2) if `varlist'<=`zL'
 					replace `bin'=floor(((`varlist'-`minabove'+2^-23)/(1+`shift0'))/`bw')*`bw'+`minabove'/(1+`shift0')+`bw'/2 if `varlist'>`zH'
 					replace `bin'=. if `varlist'>`zL'&`varlist'<=`zH'
 					gen `adjustz0'=`varlist'/(1+`shift0'*(`varlist'>`cutoff'))
