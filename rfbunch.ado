@@ -267,8 +267,6 @@
 			loc BM=r(N)
 			count if `varlist'>`zL'&`varlist'<=`cutoff'
 			loc Bunchmass=r(N)
-			count if `varlist'<=`zH'
-			loc BM0=r(N)
 			count if `varlist'<=`zH'&`varlist'>`cutoff'
 			loc Missmass=r(N)
 			count if `varlist'<=`zH'&`varlist'>`zL'
@@ -360,6 +358,9 @@
 				mat `b'=`b'[1,2..`=colsof(`b')'],`b'[1,1]
 				local shift=0
 			}
+			
+			count if `varlist'<=`zH'
+			loc BM0=r(N)
 								
 			mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`cutoff',0,0,0,`cutoff',0,1))
 			//mata: st_numscalar("maniprangecf",(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL'))/`bw')
