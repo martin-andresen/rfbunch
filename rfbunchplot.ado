@@ -63,9 +63,12 @@ cap prog drop rfbunchplot
 			mat `h0'=`h0'[1,"h0:"]
 			mat score `h0'=`h0'
 			
-			mat `h1'=e(b)
-			mat `h1'=`h1'[1,"h1:"]
-			mat score `h1'=`h1'
+			/*mat `h1'=e(b)
+			cap mat `h1'=`h1'[1,"h1:"]
+			if _rc==0 loc h1present=1
+			else loc h1present=0
+			cap mat score `h1'=`h1'*/
+			loc h1present=0
 			
 			if "`ci'"!="noci" {
 				predict double `stdp', stdp
@@ -80,8 +83,7 @@ cap prog drop rfbunchplot
 			
 		loc zL=e(lower_limit)
 		loc zH=e(upper_limit)
-		
-
+	
 		if "`adjust'"!="" {
 			loc ++plus
 			tempname adj
@@ -91,16 +93,12 @@ cap prog drop rfbunchplot
 				exit 301
 			}
 			svmat `adj', names(col)
-			foreach var in freq `namelist' bin {
-					cap replace adj_`var'=. if adj_bin*(1+_b[bunching:shift])<`zH'
-				}
-			if "`limit'"!="" {
-				foreach var in freq `namelist' bin {
-					cap replace adj_`var'=. if adj_bin*(1+_b[bunching:shift])>`max'
-				}
-			}
 			if "`namelist'"=="`e(binname)'" loc adj (bar adj_freq  adj_bin, color(maroon%50) barwidth(`=e(bandwidth)') base(0))
 			else loc adj (scatter adj_`namelist' adj_bin, color(maroon) msymbol(circle_hollow))
+			noi desc *adj*
+			cap replace adj_`namelist'=. if adj_bin<`e(cutoff)'
+			cap replace adj_freq=. if adj_bin<`e(cutoff)'
+			replace adj_bin=. if adj_bin<`e(cutoff)'
 		}
 		
 		if "`e(binname)'"!="`namelist'" {
@@ -138,8 +136,9 @@ cap prog drop rfbunchplot
 		else loc ytitle frequency
 		
 		if "`namelist'"=="`e(binname)'" {
+			if `h1present'==1 loc h1lines(line `h1' `e(binname)' if `e(binname)'<=`zL', color(navy)) (line `h1' `e(binname)' if `e(binname)'>`zH', color(navy)) (line `h1' `e(binname)' if `e(binname)'>`zL'&`e(binname)'<=`zH', color(navy) lpattern(dash))
 			loc background (bar freq `e(binname)', barwidth(`=e(bandwidth)') color(navy%50) base(0))
-			loc lines (line `h0' `e(binname)' if `e(binname)'<=`zL', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zH', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zL'&`e(binname)'<=`zH', color(maroon) lpattern(dash)) (line `h1' `e(binname)' if `e(binname)'<=`zL', color(navy)) (line `h1' `e(binname)' if `e(binname)'>`zH', color(navy)) (line `h1' `e(binname)' if `e(binname)'>`zL'&`e(binname)'<=`zH', color(navy) lpattern(dash))
+			loc lines (line `h0' `e(binname)' if `e(binname)'<=`zL', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zH', color(maroon)) (line `h0' `e(binname)' if `e(binname)'>`zL'&`e(binname)'<=`zH', color(maroon) lpattern(dash))  `h1lines'
 			loc labels label(1 "observed") label(`=2+`plus'' "estimated counterfactual") `cilab' order(1 `=2+`plus'' `cilabno') cols(`=2+`plus'')
 		}
 		else {

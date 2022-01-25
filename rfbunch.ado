@@ -110,6 +110,7 @@
 				loc H=0
 			}
 			
+			if "`H'"==" 0" loc zH=`cutoff'
 			
 			loc zL=`cutoff'-`L'*`bw'
 			if "`H'"!=" iterate" loc zH=`cutoff'+`H'*`bw'
@@ -267,11 +268,7 @@
 			loc BM=r(N)
 			count if `varlist'>`zL'&`varlist'<=`cutoff'
 			loc Bunchmass=r(N)
-			count if `varlist'<=`zH'&`varlist'>`cutoff'
-			loc Missmass=r(N)
-			count if `varlist'<=`zH'&`varlist'>`zL'
-			loc NMR=r(N)
-			
+
 			loc colfreq `varlist' frequency
 			
 			su `varlist' if `varlist'>`cutoff'
@@ -289,38 +286,51 @@
 			forvalues i=1/`=`polynomials'[1,1]' { 
 				if "`rhsvars'"=="" loc rhsvars  c.`varlist'
 				else loc rhsvars `rhsvars'##c.`varlist'
-				loc coleq h0 `coleq' h1
-			}
+				loc coleq `coleq' h0
+				loc coleq1 `coleq1' h1
+				}
 		
-			loc coleq h0 `coleq' h1
+			loc coleq `coleq' h0
+			loc coleq1 `coleq1' h1
 			
 			fvexpand `rhsvars'
 			loc names `r(varlist)' _cons
 			
-			gen `useobs' = `varlist'<=`zL'|`varlist'>`zH'
-			gen `useabove'= `varlist'>`zH'
-			gen `usebelow'=`varlist'<=`zL'
+			if "`H'"!=" iterate" {
+				gen `useobs' = `varlist'<=`zL'|`varlist'>`zH'
+				gen `useabove'= `varlist'>`zH'
+				gen `usebelow'=`varlist'<=`zL'
+				count if `varlist'<=`zH'
+				loc BM0=r(N)
+			}
 			
 			//Get counterfactual by adjusting values above z* until missing mass=excess mass
 			if inlist("`adjust'","x","y","logx") {
 				mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`=`polynomials'[1,1]',`BM',`bw',`type',`precision',0,`fill',`cutoff',`hole',1)
 				mata: st_matrix("`b'",shift)
-				mata: st_matrix("`adj_table'",)
 				mata: h0=shift[1..cols(shift)-1]
 				local shift0=`b'[1,`=colsof(`b')']
 				mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1]
 				
-				mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`=`polynomials'[1,1]',`BM0',`bw',`type',`precision',`shift0',`fill',`cutoff',`hole',-1)
-				mata: st_matrix("`b0'",shift)
-				mata: st_matrix("`adj_table'", fill(st_data(selectindex(st_data(.,"`usebelow'")),"`varlist'"),`bw',`zL',`zH',`=`b0'[1,`=colsof(`b0')']',`type',0,`cutoff',`hole',-1) \ fill(st_data(selectindex(st_data(.,"`useabove'")),"`varlist'"),`bw',`zL',`zH',`shift0',`type',0,`cutoff',`hole',1)) 
-				mata: h1=shift[1..cols(shift)-1]
-				local shift1=`b0'[1,`=colsof(`b0')']
-				
-				mat `b'=`b',`b0'[1,2..`=colsof(`b0')-1'],`b0'[1,1],`shift0',`shift1'
+				if "`H'"!="0" {
+					mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`=`polynomials'[1,1]',`BM0',`bw',`type',`precision',`shift0',`fill',`cutoff',`hole',-1)
+					mata: st_matrix("`b0'",shift)
+					mata: st_matrix("`adj_table'", fill(st_data(selectindex(st_data(.,"`usebelow'")),"`varlist'"),`bw',`zL',`zH',`=`b0'[1,`=colsof(`b0')']',`type',0,`cutoff',`hole',-1) \ fill(st_data(selectindex(st_data(.,"`useabove'")),"`varlist'"),`bw',`zL',`zH',`shift0',`type',0,`cutoff',`hole',1)) 
+					mata: h1=shift[1..cols(shift)-1]
+					local shift1=`b0'[1,`=colsof(`b0')']
+				}
+				else {
+					mata: h1=h0:/((1+`shift0'):^((0::`=`polynomials'[1,1]')'))
+					mata: st_matrix("`b0'",h1)
+					loc shift1=`shift0'
+					mata: st_matrix("`adj_table'", fill(st_data(selectindex(st_data(.,"`usebelow'")),"`varlist'"),`bw',`zL',`zH',`shift1',`type',0,`cutoff',`hole',-1) \ fill(st_data(selectindex(st_data(.,"`useabove'")),"`varlist'"),`bw',`zL',`zH',`shift0',`type',0,`cutoff',`hole',1)) 
+				}
+					
+				mat `b'=`b',`b0'[1,2..`=`polynomials'[1,1]+1'],`b0'[1,1],`shift0',`shift1'
 				
 				
 				loc names `names' `names' shift0 shift1
-				loc coleq `coleq' bunching bunching
+				loc coleq `coleq' `coleq1' bunching bunching
 				loc adjnames adj_bin adj_freq
 				if `shift0'>0|`shift1'>0 {
 					noi di as text "Note: Estimated shift parameter(s) is positive. You might want to think about whether it makes "
@@ -331,9 +341,11 @@
 		
 			//get counterfactual by iteratively adjusting upper bound zH untill missing mass==excess mass
 			else if "`H'"==" iterate" {
-				mata: zH=iterate(st_data(.,"`varlist'"),`bw',`fill',`zL',`minabove',`cutoff',1,`=`polynomials'[1,1]',`precision',`BM')
+				gen `useobs'=`varlist'<`zL'&`varlist'>`cutoff'
+				mata: zH=iterate(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`fill',`zL',`minabove',`cutoff',1,`=`polynomials'[1,1]',4,`BM',1)
 				mata: st_matrix("`b'",zH)
 				mata: h0=zH[1..cols(zH)-1]
+				mata: h1=h0
 				mat `b'=`b'[1,2..`=colsof(`b')-1'],`b'[1,1],`b'[1,`=colsof(`b')']
 				local zH=`b'[1,`=colsof(`b')']
 				if r(N)<=1 {
@@ -342,25 +354,37 @@
 				}
 				loc names `names' upper_bound
 				loc coleq `coleq' bunching
-				loc hole=1
+				loc zHeval=`zH'
 				loc zH=`cutoff'+ceil((`zH'-`cutoff')/`bw')*`bw'
 				su `varlist' if `varlist'>`zH'
 				loc minabove=r(min)
+				noi mata: h0
 			}
 			
 			//straightforward with no adjustment
 			else {
-				mata: data=fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',0,0,`fill',`cutoff',`hole')
+				mata: data=fill(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`bw',`zL',`zH',0,0,`fill',`cutoff',`hole',1)
 				mata: xbin=J(rows(data[.,1]),1,1)
 				mata: for (p=1; p<=`=`polynomials'[1,1]'; p++) xbin=xbin,data[.,1]:^p
 				mata:h0=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
+				mata:h1=h0
 				mata: st_matrix("`b'",h0)
 				mat `b'=`b'[1,2..`=colsof(`b')'],`b'[1,1]
 				local shift=0
 			}
 			
-			count if `varlist'<=`zH'
-			loc BM0=r(N)
+			if "`H'"==" iterate" {
+				replace `useobs' = `varlist'<=`zL'|`varlist'>`zH'
+				gen `useabove'= `varlist'>`zH'
+				gen `usebelow'=`varlist'<=`zL'
+			}
+			
+			
+			count if `varlist'<=`zH'&`varlist'>`cutoff'
+			loc Missmass=r(N)
+			count if `varlist'<=`zH'&`varlist'>`zL'
+			loc NMR=r(N)
+
 								
 			mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`cutoff',0,0,0,`cutoff',0,1))
 			//mata: st_numscalar("maniprangecf",(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL'))/`bw')
@@ -372,10 +396,17 @@
 			loc M=misscf-`Missmass'
 			loc fs=`B'/`NMR'
 			loc fs0=`B'/(excesscf+`B')
-			loc fs1=`M'/misscf
-			mat `b'=`b',`B',`=`B'/`N'',`fs0',`fs1' //Number of bunchers, bunchers share of sample, normalized bunching, B relative to counterfanctual in missing region, B relative to counterfactual in excess regione
-			loc coleq `coleq' bunching bunching bunching bunching
-			loc names `names' number_bunchers share_sample share_excessregion share_missregion
+			
+			mat `b'=`b',`B',`=`B'/`N'',`fs0' //Number of bunchers, bunchers share of sample, normalized bunching, B relative to counterfanctual in missing region, B relative to counterfactual in excess regione
+			loc coleq `coleq' bunching bunching bunching 
+			loc names `names' number_bunchers share_sample share_excessregion
+			
+			if "`H'"!=" 0" {
+				loc fs1=`M'/misscf
+				loc coleq `coleq' bunching
+				loc names `names' share_missregion
+				mat `b'=`b',`fs1'
+			}
 			
 			if "`constant'"!="constant" {
 				mata: meannonbunch=(polyeval(polyinteg((0,h0),1),`cutoff') -polyeval(polyinteg((0,h0),1),`zL'))/(polyeval(polyinteg(h0,1),`cutoff') -polyeval(polyinteg(h0,1),`zL'))
@@ -405,10 +436,15 @@
 						exit 301
 					}
 					
+					if "`H'"==" 0" loc zHeval=`cutoff'+eresp
+					else if "`H'"!= " iterate" loc zHeval=`zH'
+
 					mata: meanh0L=(polyeval(polyinteg((0,h0),1),`cutoff') -polyeval(polyinteg((0,h0),1),`zL'))/(polyeval(polyinteg(h0,1),`cutoff') -polyeval(polyinteg(h0,1),`zL'))
-					mata: meanh1H=(polyeval(polyinteg((0,h1),1),`zH') -polyeval(polyinteg((0,h1),1),`cutoff'))/(polyeval(polyinteg(h1,1),`zH') -polyeval(polyinteg(h1,1),`cutoff'))
 					mata: st_numscalar("meanh0L",meanh0L)
+					
+					mata: meanh1H=(polyeval(polyinteg((0,h1),1),`zHeval') -polyeval(polyinteg((0,h1),1),`cutoff'))/(polyeval(polyinteg(h1,1),`zHeval') -polyeval(polyinteg(h1,1),`cutoff'))
 					mata: st_numscalar("meanh1H",meanh1H)
+					
 					mata: totalresponse=(1/`bw')*(polyeval(polyinteg((0,h0),1),`cutoff'+eresp) -polyeval(polyinteg((0,h0),1),`cutoff'))-(`cutoff'*`B')
 					mata: st_numscalar("totalresponse",totalresponse)
 					}
@@ -527,9 +563,9 @@
 					}
 					
 					if `xtypes'[`i',1]==0  {
-						noi reg `var' `rhsvars0' `localweights'  if `varlist'<=`zL' //no link
+						reg `var' `rhsvars0' `localweights'  if `varlist'<=`zL' //no link
 						mat `f0'=e(b)
-						noi reg `var' `rhsvars1' `localweights'  if `varlist'>`zH'
+						reg `var' `rhsvars1' `localweights'  if `varlist'>`zH'
 						mat `f1'=e(b)
 					}
 						
@@ -575,12 +611,11 @@
 					forvalues j=1/`=(`polynomials'[`=`i'+1',1]+1)' {
 						loc coleq `coleq' f1_`var'
 					}
-					
-					
+					loc zHeval=`zH'
 					mata: st_matrix("`pred_excess'",(polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`cutoff')-polyeval(polyinteg(polymult(h0,st_matrix("`f0'")),1),`zL')) /	(polyeval(polyinteg(h0,1),`cutoff')-	polyeval(polyinteg(h0,1),`zL')))
-					mata: st_matrix("`pred_missing'",(polyeval(polyinteg(polymult(h1,st_matrix("`f1'")),1),`zH')-polyeval(polyinteg(polymult(h1,st_matrix("`f1'")),1),`cutoff')) :/(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff')))
-					mata: st_matrix("`w1'",(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff'))/(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`zL')))
-					mata: st_matrix("`w0'",(polyeval(polyinteg(h0,1),`cutoff')-polyeval(polyinteg(h0,1),`zL'))/(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL')))
+					mata: st_matrix("`pred_missing'",(polyeval(polyinteg(polymult(h1,st_matrix("`f1'")),1),`zHeval')-polyeval(polyinteg(polymult(h1,st_matrix("`f1'")),1),`cutoff')) :/(polyeval(polyinteg(h1,1),`zHeval')-polyeval(polyinteg(h1,1),`cutoff')))
+					mata: st_matrix("`w1'",(polyeval(polyinteg(h1,1),`zHeval')-polyeval(polyinteg(h1,1),`cutoff'))/(polyeval(polyinteg(h1,1),`zHeval')-polyeval(polyinteg(h1,1),`zL')))
+					mata: st_matrix("`w0'",(polyeval(polyinteg(h0,1),`cutoff')-polyeval(polyinteg(h0,1),`zL'))/(polyeval(polyinteg(h0,1),`zHeval')-polyeval(polyinteg(h0,1),`zL')))
 					
 					mat `pred_cf'=`w0'[1,1]*`pred_excess'[1,1]+`w1'[1,1]*`pred_missing'[1,1]
 					su `var' if `varlist'<=`cutoff'&`varlist'>`zL'
@@ -671,7 +706,26 @@
 				loc names `names' elasticity
 				loc coleq `coleq' notch
 			}
-
+			
+			//report AIC
+			preserve
+			gen `bin'=ceil((`varlist'-`cutoff'-2^-23)/`bw')*`bw'+`cutoff'-`bw'/2 if `varlist'<=`zL'|`varlist'>`zH'
+			if "`adjust'"=="x" replace `bin'=floor(((`varlist'-`minabove'+2^-23)/(1+`shift0'))/`bw')*`bw'+`minabove'/(1+`shift0')+`bw'/2 if `varlist'
+			collapse (count) freq=`varlist', by(`bin')
+			forvalues i=1/`=`polynomials'[1,1]' {
+				if `i'==1 loc rhsvars c.`bin'
+				else loc rhsvars `rhsvars'##c.`bin'
+			}
+			reg freq `rhsvars'
+			estat ic
+			loc aic=r(S)[1,5]
+			restore
+			/*noi mat li `b'
+			noi di "`names'"
+			local numnames: word count `names'
+			local numeq: word count `coleq'
+			noi di `numnames'
+			noi di `numeq'*/
 			mat colnames `b'=`names'
 			mat coleq `b'=`coleq'
 			
@@ -687,7 +741,7 @@
 			}
 			//ereturn scalar min=`lo'
 			//ereturn scalar max=`hi'
-			
+			ereturn scalar aic=`aic'
 			ereturn local binname `varlist'
 			ereturn local indepvars `xvars'
 			mat colnames `table'=`colfreq'
@@ -818,6 +872,12 @@
 			while (v*neg>0)	{
 				shift=shift-neg/10^i
 				data=fill(X,bw,zL,zH,shift,type,fill,cutoff,hole,plus)
+				if (plus==1) {
+					data=data[1..rows(data)-1,1..2]
+				}
+				else if (plus==-1) {
+					data=data[2..rows(data),1..2]
+				}
 				xbin=J(rows(data[.,1]),1,1)
 				for (p=1; p<=k; p++) xbin=xbin,data[.,1]:^p
 				b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
@@ -835,21 +895,24 @@
 	return(b,shift)
 	}
 
-	function iterate(real matrix X, real scalar bw, real scalar fill, real scalar zL, real scalar zH, real scalar cutoff, real scalar hole, real scalar k,real scalar precision, real scalar BM) 
+	function iterate(real matrix X, real scalar bw, real scalar fill, real scalar zL, real scalar zH, real scalar cutoff, real scalar hole, real scalar k,real scalar precision, real scalar BM,plus) 
 	{
 			max=max(X)
-			//for (i=2;i<=precision;i++) {
+			//for (i=3;i<=precision;i++) {
 				v=1
+				vhist=0
+				zhist=0
 				while ((v>0)&(zH<max)) {
-					data=fill(select(X,(X:<=zL) :| (X:>zH)),bw,zL,zH,0,0,fill,cutoff,hole)
-					
+					zH=zH+cutoff/10^precision
+					data=fill(select(X,(X:<=zL) :| (X:>zH)),bw,zL,zH,0,0,fill,cutoff,hole,plus)
 					xbin=J(rows(data[.,1]),1,1)
 					for (p=1; p<=k; p++) xbin=xbin,data[.,1]:^p
 					b=(invsym(quadcross(xbin,xbin))*quadcross(xbin,data[.,2]))'
 					v=(BM*bw-polyeval(polyinteg(b,1),max)+polyeval(polyinteg(b,1),zL))
-					zH=zH+cutoff/10^precision
+					vhist=vhist \ v
+					zhist=zhist \ zH
 				}
-				zH=zH+cutoff/10^precision
+				zH=zH-cutoff/10^precision
 			//}
 			return(b,zH)
 	}
