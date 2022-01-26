@@ -95,7 +95,6 @@ cap prog drop rfbunchplot
 			svmat `adj', names(col)
 			if "`namelist'"=="`e(binname)'" loc adj (bar adj_freq  adj_bin, color(maroon%50) barwidth(`=e(bandwidth)') base(0))
 			else loc adj (scatter adj_`namelist' adj_bin, color(maroon) msymbol(circle_hollow))
-			noi desc *adj*
 			cap replace adj_`namelist'=. if adj_bin<`e(cutoff)'
 			cap replace adj_freq=. if adj_bin<`e(cutoff)'
 			replace adj_bin=. if adj_bin<`e(cutoff)'
