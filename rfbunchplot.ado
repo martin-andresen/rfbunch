@@ -109,7 +109,8 @@ cap prog drop rfbunchplot
 			if "`means'"!="nomeans" {
 				mat `meanmat'=e(b)
 				mat `meanmat'=`meanmat'[1,"`namelist'_effects:"]'
-				mat `meanmat'=`meanmat'[2..3,1] \ `meanmat'[6..7,1]
+				if `xtype'!=3 mat `meanmat'=`meanmat'[2..3,1] \ `meanmat'[6..7,1]
+				else mat `meanmat'=`meanmat'[1..2,1] \ `meanmat'[5..6,1]
 				svmat `meanmat'
 				loc ytitle `namelist'
 				gen `x'=_b[bunching:mean_h0L] in 1
