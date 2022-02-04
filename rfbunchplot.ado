@@ -124,7 +124,8 @@ cap prog drop rfbunchplot
 				if "`ci'"!="noci"{
 					mat `cimat'=e(ci_normal)
 					mat `cimat'=`cimat'[.,"`namelist'_effects:"]'
-					mat `cimat'=`cimat'[2..3,.] \ `cimat'[6..7,.]
+					if `xtype'!=3 mat `cimat'=`cimat'[2..3,.] \ `cimat'[6..7,.]
+					else mat `cimat'=`cimat'[1..2,.] \ `cimat'[5..6,.]
 					svmat `cimat'
 					loc ciplot (rcap `cimat'1 `cimat'2 `x' in 1/4, color(dkgreen))
 					loc cilabno=4
