@@ -339,6 +339,7 @@
 				}
 				}
 		
+			
 			//get counterfactual by iteratively adjusting upper bound zH untill missing mass==excess mass
 			else if "`H'"==" iterate" {
 				gen `useobs'=`varlist'<`zL'&`varlist'>`cutoff'
@@ -373,6 +374,7 @@
 				local shift=0
 			}
 			
+			
 			if "`H'"==" iterate" {
 				replace `useobs' = `varlist'<=`zL'|`varlist'>`zH'
 				gen `useabove'= `varlist'>`zH'
@@ -380,8 +382,11 @@
 			}
 			
 			
-			count if `varlist'<=`zH'&`varlist'>`cutoff'
-			loc Missmass=r(N)
+			if (`zH'!=`cutoff') {
+				
+				count if `varlist'<=`zH'&`varlist'>`cutoff'
+				loc Missmass=r(N)
+			}
 			count if `varlist'<=`zH'&`varlist'>`zL'
 			loc NMR=r(N)
 
@@ -389,11 +394,13 @@
 			mata: st_matrix("`table'",fill(st_data(.,"`varlist'"),`bw',`cutoff',`cutoff',0,0,0,`cutoff',0,1))
 			//mata: st_numscalar("maniprangecf",(polyeval(polyinteg(h0,1),`zH')-polyeval(polyinteg(h0,1),`zL'))/`bw')
 			mata: st_numscalar("excesscf",(polyeval(polyinteg(h0,1),`cutoff')-polyeval(polyinteg(h0,1),`zL'))/`bw')
-			mata: st_numscalar("misscf",(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff'))/`bw')
+			if (`H'!=0) {
+				mata: st_numscalar("misscf",(polyeval(polyinteg(h1,1),`zH')-polyeval(polyinteg(h1,1),`cutoff'))/`bw')
+			}
 			mata: st_numscalar("h0tau",(polyeval(h0,`cutoff')))
 
 			loc B=`Bunchmass'-excesscf
-			loc M=misscf-`Missmass'
+			if `H'!=0 loc M=misscf-`Missmass'
 			loc fs=`B'/`NMR'
 			loc fs0=`B'/(excesscf+`B')
 			
@@ -401,7 +408,7 @@
 			loc coleq `coleq' bunching bunching bunching 
 			loc names `names' number_bunchers share_sample share_excessregion
 			
-			if "`H'"!=" 0" {
+			if `H'!=0 {
 				loc fs1=`M'/misscf
 				loc coleq `coleq' bunching
 				loc names `names' share_missregion
@@ -442,8 +449,10 @@
 					mata: meanh0L=(polyeval(polyinteg((0,h0),1),`cutoff') -polyeval(polyinteg((0,h0),1),`zL'))/(polyeval(polyinteg(h0,1),`cutoff') -polyeval(polyinteg(h0,1),`zL'))
 					mata: st_numscalar("meanh0L",meanh0L)
 					
-					mata: meanh1H=(polyeval(polyinteg((0,h1),1),`zHeval') -polyeval(polyinteg((0,h1),1),`cutoff'))/(polyeval(polyinteg(h1,1),`zHeval') -polyeval(polyinteg(h1,1),`cutoff'))
-					mata: st_numscalar("meanh1H",meanh1H)
+					if `H'!=0 {
+						mata: meanh1H=(polyeval(polyinteg((0,h1),1),`zHeval') -polyeval(polyinteg((0,h1),1),`cutoff'))/(polyeval(polyinteg(h1,1),`zHeval') -polyeval(polyinteg(h1,1),`cutoff'))
+						mata: st_numscalar("meanh1H",meanh1H)
+					}
 					
 					mata: totalresponse=(1/`bw')*(polyeval(polyinteg((0,h0),1),`cutoff'+eresp) -polyeval(polyinteg((0,h0),1),`cutoff'))-(`cutoff'*`B')
 					mata: st_numscalar("totalresponse",totalresponse)
@@ -455,10 +464,18 @@
 					scalar totalresponse=eresp*h0tau
 					}
 				
-				loc coleq `coleq' bunching bunching bunching bunching bunching
-				loc names `names' mean_h0L mean_h1H marginal_response total_response average_response
-				mat `b'=`b',meanh0L,meanh1H,eresp,totalresponse,`=totalresponse/`B''
-				}
+				
+				if `H'!=0 {
+					loc coleq `coleq' bunching bunching bunching bunching bunching
+					loc names `names' mean_h0L mean_h1H marginal_response total_response average_response
+					mat `b'=`b',meanh0L,meanh1H,eresp,totalresponse,`=totalresponse/`B''
+					} 
+					else {
+						loc coleq `coleq' bunching bunching bunching bunching
+						loc names `names' mean_h0L marginal_response total_response average_response
+						mat `b'=`b',meanh0L,eresp,totalresponse,`=totalresponse/`B''
+					}
+			}
 			
 			restore
 		
