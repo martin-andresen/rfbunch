@@ -5,7 +5,7 @@
 {title:Title}
 
 {p2colset 5 14 16 2}{...}
-{p2col:{cmd:rfbunch} {hline 2}}Reduced form and structural bunching estimation with multiple response variables.
+{p2col:{cmd:rfbunch} {hline 2}}Bunching estimation using the polynomial strategy and potentially multiple endogenous variables.
 {p_end}
 {p2colreset}{...}
 
@@ -19,19 +19,18 @@
 {synoptset 25 tabbed}{...}
 {synopthdr}
 {synoptline}
-{syntab:Reduced form bunching}
+{syntab:Bunching}
 {synopt:{opt bw(real)}} Specifies the bandwidth of the bins; required.{p_end}
 {synopt:{opt cut:off(real)}} Specifies the cutoff z*; required.{p_end}
 {synopt:{opt lim:its(numlist)}} specify L and H, the number of bins excluded below and above the cutoff. Default is 1 and 0.{p_end}
 {synopt:{opt pol:ynomial(numlist)}}specify the degree of the polynomial for the density of the running variable (default=7) and other response variables (default=1). {p_end}
 {synopt:{opt adj:ust(numlist)}}Iteratively adjusts the running variable above the cutoff to account for distortions. Allows "none" (default), "y" (Chetty et al., 2011) and "x" (Andresen and Thorvaldsen, 2021).{p_end}
-{synopt:{opt constant}}uses the constant approximation to the density in the bunching region (Kleven and Waseem, 2013) rather than the estimated polynomial.{p_end}
+{synopt:{opt constant}}uses the constant approximation to the density in the bunching region rather than the estimated polynomial.{p_end}
 {synopt:{opt nofill}}does not fill empty bins, unlike the default which is to use frequency of 0 for any bins where there are no agents.{p_end}
 
-{syntab:Structural}
+{syntab:Estimating structural parameters}
 {synopt:{opt kink(numlist)}}Report the structural elasticity estimates from a tax kink specified by two numbers t0, t1. See Saez 2010, Chetty et al. 2011.{p_end}
 {synopt:{opt notch(numlist)}}Report the structural elasticity estimates from a tax notch specified by two or three numbers t0, t1, deltaT. See Kleven and Waseem, 2013.{p_end}
-{synopt:{opt tcr(numlist)}}Report structural elasticities of the thin capitalization rule of Andresen and Thorvaldsen (2021).{p_end}
 {synoptline}
 {p2colreset}{...}
 
@@ -40,7 +39,7 @@
 {title:Description}
 
 {pstd}
-{cmd:rfbunch} calculates reduced form bunching estimates for the main running variable {depvar} and alternative response variables {indepvars} using polynomials.
+{cmd:rfbunch} calculates reduced form bunching estimates for the main running variable {depvar} and alternative response variables {indepvars} using the polynomial strategy
 
 {marker remarks}{...}
 {title:Remarks}
@@ -51,22 +50,22 @@ rfbunch first estimates polynomial density estimates of the counterfactual densi
  rfbunch repeatedly shifts the running variable above the cutoff until the missing
  mass above the cutoff is equal to the excess mass in the bunching region, either 
  by shifting bin counts up ("y", Chetty et al. 2011) or by shifting observations 
- to the right and reconstructing bins ("x", Andresen and Thorvaldsen, 2021).
+ proportionally to the right and reconstructing bins ("x", Andresen and Thorvaldsen, 2024), or by shifting the running variable additively to the right ("logx", Andresen and Thorvaldsen, 2024).
 
 {pstd}
 If alternative endogenous variables are specified, for each of them rfbunch estimates
  a polynomial relationship between this variable and the running variable separately
  below and above the cutoff and then backs out estimates of the mean of this variable 
  a) among nonbuchers in the bunching region, b) among bunchers and c) for bunchers' 
- counterfactual allocation.
+ counterfactual allocation, in the spirit of Diamond and Persson (2016)
  
 {pstd}
 rfbunch does not report standard errors, but standard errors can easily be obtained 
 by using bootstrap.
 
 {pstd}
-If any of the structural options tcr(), notch() or kink() are specified, rfbunch treats data
-as coming from one of these models and estimate structural elasticities.
+If any of the structural options notch() or kink() are specified, rfbunch treats data
+as coming from the iso-elaastic labor supply model and estimate structural elasticities.
 
 {pstd}
 If kink(t0 t1) is specified, user needs to provide the tax rates below (t0) and above(t1) the cutoff,
@@ -77,10 +76,6 @@ numerically.
 If notch(t0 t1 [deltaT]) is specified, user needs to provide the tax rates below (t0) and above(t1) the cutoff,
 as well as an optional lump sum tax deltaT>0. Tax rates must be real numbers between 0 and 1. Lump sum tax must be real number >=0. 
 rfbunch then computes the elasticity by solving equation (5) in Kleven and Waseem (2013) numerically.
-
-{pstd}
-If tcr(t eta r) is specified, user needs to provide the corporate tax rate (t), allowance (eta) and cost of equity,
-rfbunch then computes the elasticities from Andresen and Thorvaldsen (2021) numerically. In development, use with care. 
 
 {marker saved_results}{...}
 {title:Stored results}
