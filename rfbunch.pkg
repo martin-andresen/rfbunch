@@ -1,5 +1,5 @@
 v0.95
-d rfbunch reduced form bunching estimation with multiple response variables.
+d rfbunch polynomial bunching estimation with multiple response variables.
 d
 d {bf:M. E. Andresen, Research department, Statistics Norway}
 d REduced form bunching estimation with multiple response variables.  After installation, see help {bf:rfbunch}, help {bf:rfbunchpolot}.
