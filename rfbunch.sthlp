@@ -25,6 +25,7 @@
 {synopt:{opt lim:its(numlist)}} specify L and H, the number of bins excluded below and above the cutoff. Default is 1 and 0.{p_end}
 {synopt:{opt pol:ynomial(numlist)}}specify the degree of the polynomial for the density of the running variable (default=7) and other response variables (default=1). {p_end}
 {synopt:{opt adj:ust(numlist)}}Iteratively adjusts the running variable above the cutoff to account for distortions. Allows "none" (default), "y" (Chetty et al., 2011) and "x" (Andresen and Thorvaldsen, 2021).{p_end}
+{synopt:{opt log}}Specify that the running variable is in logs. Affects the adjustment procedure if adjust=="x".{p_end}
 {synopt:{opt constant}}uses the constant approximation to the density in the bunching region rather than the estimated polynomial.{p_end}
 {synopt:{opt nofill}}does not fill empty bins, unlike the default which is to use frequency of 0 for any bins where there are no agents.{p_end}
 

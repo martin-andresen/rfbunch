@@ -1,4 +1,4 @@
-*! rfbunchplot version date 20220111
+*! rfbunchplot version date 20240
 * Author: Martin Eckhoff Andresen
 * This program is part of the rfbunch package.
 cap prog drop rfbunchplot
@@ -150,7 +150,7 @@ cap prog drop rfbunchplot
 		
 
 			
-		twoway `background' `adj' `ciplot' `lines', xline(`zH', lpattern(dash) lcolor(black)) xline(`zL', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) graphregion(color(white)) plotregion(lcolor(black)) ytitle("`ytitle'") legend(`labels') `graph_opts' 	 		
+		twoway `background' `adj' `ciplot' `lines', xline(`zH', lpattern(dash) lcolor(black)) xline(`zL', lpattern(dash) lcolor(black)) xline(`=e(cutoff)', lpattern(dash) lcolor(maroon)) graphregion(color(white)) plotregion(lcolor(black)) ytitle("`ytitle'") legend(`labels' pos(6) ring(1)) `graph_opts' 	 		
 
 		restore
 	}

@@ -12,6 +12,7 @@
 		localbw(string) ///
 		localkernel(string) ///
 		ADJust(string) ///
+		log ///
 		fill ///
 		constant ///
 		placebo ///
@@ -122,13 +123,13 @@
 				}
 			
 			if "`adjust'"!="" {
-				if !inlist("`adjust'","y","x","logx") {
-					noi di in red "Option adjust can only take values y (Chetty et al.), x and logx (Andresen and Thorvaldsen)"
+				if !inlist("`adjust'","y","x") {
+					noi di in red "Option adjust can only take values y (Chetty et al.), x (Andresen and Thorvaldsen)"
 					exit 301
 					}
 				}
-			if "`adjust'"=="x" loc type=2
-			else if "`adjust'"=="logx" loc type=3
+			if "`adjust'"=="x"&"`log'"!="log" loc type=2
+			else if "`adjust'"=="x"&"`log'"=="log" loc type=3
 			else if "`adjust'"=="y" loc type=1
 			else loc type=0
 			
@@ -305,7 +306,7 @@
 			}
 			
 			//Get counterfactual by adjusting values above z* until missing mass=excess mass
-			if inlist("`adjust'","x","y","logx") {
+			if inlist("`adjust'","x","y") {
 				mata: shift=shifteval(st_data(selectindex(st_data(.,"`useobs'")),"`varlist'"),`zL',`zH',`=`polynomials'[1,1]',`BM',`bw',`type',`precision',0,`fill',`cutoff',`hole',1)
 				mata: st_matrix("`b'",shift)
 				mata: h0=shift[1..cols(shift)-1]
@@ -694,8 +695,16 @@
 			
 			//ESTIMATE ELASTICITIES
 			tempname e
+			if "`log'"=="log" {
+				loc erespuse=exp(`=eresp'+`cutoff')-exp(`cutoff')
+				loc cutoffuse=exp(`cutoff')
+			}
+			else {
+				loc erespuse=`=eresp'
+				loc cutoffuse=`cutoff'
+			}
 			if "`tcr'"!="" {
-				mata: e=tcr(`t_tcr',`cutoff',`eta_tcr',`r_tcr',`=eresp',`shift',st_matrix("`initmat'"))
+				mata: e=tcr(`t_tcr',`cutoffuse',`eta_tcr',`r_tcr',`erespuse',`shift',st_matrix("`initmat'"))
 				mata: st_matrix("`e'",e)
 				if `e'[1,5]!=0 {
 					noi di as error "Error code `=errorcode' during numeric optimization using tcr(), se help mata optimize"
@@ -707,12 +716,12 @@
 				loc coleq `coleq' tcr tcr tcr tcr
 			}
 			if "`kink'"!="" {
-				mat `b'=`b',`=ln(`=eresp'/`cutoff'+1)/(ln(1-`t0_kink')-ln(1-`t1_kink'))'
+				mat `b'=`b',`=ln(`erespuse'/`cutoffuse'+1)/(ln(1-`t0_kink')-ln(1-`t1_kink'))'
 				loc names `names' elasticity
 				loc coleq `coleq' kink
 			}	
 			if "`notch'"!="" {
-				mata: e=notch(`t0_notch',`t1_notch',`deltaT_notch',`cutoff',`=eresp',`init')
+				mata: e=notch(`t0_notch',`t1_notch',`deltaT_notch',`cutoffuse',`erespuse',`init')
 				mata: st_matrix("`e'",e)
 				if `e'[1,2]!=0 {
 					noi di as error "Error code `errorcode' during numeric optimization using notch(). See help mata optimize."
