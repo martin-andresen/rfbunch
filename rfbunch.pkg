@@ -4,7 +4,7 @@ d
 d {bf:M. E. Andresen, Research department, Statistics Norway}
 d REduced form bunching estimation with multiple response variables.  After installation, see help {bf:rfbunch}, help {bf:rfbunchpolot}.
 d
-d Distribution-Date: 20210906
+d Distribution-Date: 20240605
 f rfbunch.ado
 f rfbunch.sthlp
 f rfbunchplot.ado
