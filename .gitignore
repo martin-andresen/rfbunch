@@ -1,0 +1,35 @@
+# never track files with these endings
+*.asv
+*.mat
+*.gph
+*.png
+*.dat
+*.csv
+*.dta
+*.txt
+*.log
+*.xlsx
+*.xls
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.bcf
+*.nav
+*.run.xml
+*.snm
+*.db
+*.tex
+*.cpg
+*.dbf
+*.prj
+*.shp
+*.shx
+*.zip
+*.ini
+.DS_Store
+# but have those folders in the structure
+!.keep
+*.smcl
+*.7z
+*.stswp
